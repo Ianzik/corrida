@@ -1,0 +1,706 @@
+<html lang="pt-BR"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Treino de Corrida</title>
+  <meta name="theme-color" content="#0f1115">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Treino">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f1115;
+      color: #f5f5f5;
+      padding: 20px;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .subtitulo { color: #9aa0aa; font-size: 14px; margin-bottom: 20px; }
+
+    .cartao {
+      background: #1a1d24;
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    .rotulo {
+      color: #9aa0aa;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .destaque { font-size: 22px; font-weight: 700; margin-top: 4px; }
+
+    /* Cartao grande do cronometro */
+    .acaoCartao { text-align: center; }
+    .acaoTexto { font-size: 28px; font-weight: 800; letter-spacing: 1px; }
+    .tempoRestante {
+      font-size: 64px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      margin-top: 8px;
+    }
+    .acaoCartao.corrida { background: #2a1820; }
+    .acaoCartao.corrida .acaoTexto { color: #ff6b81; }
+    .acaoCartao.caminhada { background: #16212a; }
+    .acaoCartao.caminhada .acaoTexto { color: #6bd0ff; }
+    .acaoCartao.concluida { background: #16291c; }
+    .acaoCartao.concluida .acaoTexto { color: #5cd98a; }
+
+    /* Barra de progresso geral */
+    .barra {
+      background: #2a2e38;
+      border-radius: 999px;
+      height: 10px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    .barraPreenchida {
+      background: #ffb020;
+      height: 100%;
+      width: 0%;
+      transition: width 0.25s linear;
+    }
+
+    /* Linha de tempo total da sessao */
+    .tempoTotalLinha {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 14px;
+      color: #cfd3da;
+      font-variant-numeric: tabular-nums;
+    }
+    .tempoTotalLinha .faltam { color: #9aa0aa; }
+
+    /* Botoes */
+    .botoes { display: flex; gap: 10px; margin-bottom: 16px; }
+    button {
+      flex: 1;
+      padding: 16px;
+      font-size: 17px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      color: #0f1115;
+    }
+    #btnIniciar { background: #ffb020; }
+    #btnReiniciar { background: #3a3f4b; color: #f5f5f5; }
+
+    /* Navegação entre sessões */
+    .navSessao {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      gap: 10px;
+    }
+    .navSessao #planoProgresso {
+      flex: 1;
+      text-align: center;
+      font-size: 13px;
+      color: #9aa0aa;
+    }
+    .navBtn {
+      flex: 0 0 auto;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-weight: 700;
+      background: #2a2e38;
+      color: #f5f5f5;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .navBtn:disabled { opacity: 0.35; cursor: default; }
+
+    /* Rodapé */
+    .rodape { text-align: center; margin-top: 4px; }
+    .linkBtn {
+      flex: 0 0 auto;
+      background: none;
+      color: #6b7280;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    /* Lista de blocos */
+    ul { list-style: none; margin-top: 12px; }
+    li {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+    li.corrida { background: #2a1820; color: #ff6b81; }
+    li.caminhada { background: #16212a; color: #6bd0ff; }
+    li.ativo { outline: 2px solid #ffb020; }
+    .tempo { font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <h1>Treino de Corrida</h1>
+  <p class="subtitulo">Do zero aos 30 minutos contínuos</p>
+
+  <div class="cartao">
+    <div class="rotulo">Sessão atual</div>
+    <div class="destaque" id="tituloSessao">Carregando...</div>
+    <div class="navSessao">
+      <button id="btnAnterior" class="navBtn">‹ Anterior</button>
+      <span id="planoProgresso">0 de 42 concluídas</span>
+      <button id="btnProxima" class="navBtn">Próxima ›</button>
+    </div>
+  </div>
+
+  <div class="cartao acaoCartao" id="acaoCartao">
+    <div class="acaoTexto" id="acaoTexto">Pronto?</div>
+    <div class="tempoRestante" id="tempoRestante">00:00</div>
+    <div id="avisoTela" style="font-size:12px;color:#9aa0aa;margin-top:8px;min-height:16px;"></div>
+  </div>
+
+  <div class="cartao">
+    <div class="rotulo" id="progressoTexto">Bloco 0 de 0</div>
+    <div class="barra"><div class="barraPreenchida" id="barraPreenchida"></div></div>
+    <div class="tempoTotalLinha">
+      <span id="tempoTotalDecorrido">00:00 / 00:00</span>
+      <span class="faltam" id="tempoTotalRestante">faltam 00:00</span>
+    </div>
+  </div>
+
+  <div class="botoes">
+    <button id="btnIniciar">Iniciar</button>
+    <button id="btnReiniciar">Reiniciar</button>
+  </div>
+
+  <div class="cartao">
+    <div class="rotulo">Estrutura da sessão</div>
+    <ul id="listaIntervalos"></ul>
+  </div>
+
+  <p class="rodape">
+    <button id="btnZerar" class="linkBtn">Zerar progresso</button>
+  </p>
+
+  <script>
+    // ====================================================================
+    // 1. OS DADOS DO PLANO
+    //   runSeconds          = duração de cada corrida, em segundos
+    //   runReps             = quantas corridas a sessão tem
+    //   walkBetweenSeconds  = caminhada de descanso entre as corridas
+    // ====================================================================
+    const SEMANAS = [
+      { runSeconds: 60,   runReps: 6, walkBetweenSeconds: 120 }, // Semana 1
+      { runSeconds: 90,   runReps: 6, walkBetweenSeconds: 120 }, // Semana 2
+      { runSeconds: 120,  runReps: 6, walkBetweenSeconds: 120 }, // Semana 3
+      { runSeconds: 180,  runReps: 5, walkBetweenSeconds: 120 }, // Semana 4
+      { runSeconds: 240,  runReps: 4, walkBetweenSeconds: 120 }, // Semana 5
+      { runSeconds: 300,  runReps: 4, walkBetweenSeconds: 120 }, // Semana 6
+      { runSeconds: 420,  runReps: 3, walkBetweenSeconds: 120 }, // Semana 7
+      { runSeconds: 540,  runReps: 3, walkBetweenSeconds: 120 }, // Semana 8
+      { runSeconds: 720,  runReps: 2, walkBetweenSeconds: 120 }, // Semana 9
+      { runSeconds: 900,  runReps: 2, walkBetweenSeconds: 120 }, // Semana 10
+      { runSeconds: 1080, runReps: 1, walkBetweenSeconds: 0 },   // Semana 11
+      { runSeconds: 1320, runReps: 1, walkBetweenSeconds: 0 },   // Semana 12
+      { runSeconds: 1560, runReps: 1, walkBetweenSeconds: 0 },   // Semana 13
+      { runSeconds: 1800, runReps: 1, walkBetweenSeconds: 0 },   // Semana 14
+    ];
+
+    const AQUECIMENTO = 300;        // 5 minutos de caminhada no início
+    const DESAQUECIMENTO = 300;     // 5 minutos de caminhada no fim
+    const SESSOES_POR_SEMANA = 3;
+
+    // ====================================================================
+    // 2. FÁBRICA DE INTERVALOS
+    // ====================================================================
+    function gerarIntervalos(semana) {
+      const intervalos = [];
+      intervalos.push({ tipo: 'caminhada', segundos: AQUECIMENTO, descricao: 'Aquecimento' });
+      for (let i = 0; i < semana.runReps; i++) {
+        intervalos.push({ tipo: 'corrida', segundos: semana.runSeconds, descricao: 'Corra' });
+        const ehUltimaCorrida = (i === semana.runReps - 1);
+        if (!ehUltimaCorrida && semana.walkBetweenSeconds > 0) {
+          intervalos.push({ tipo: 'caminhada', segundos: semana.walkBetweenSeconds, descricao: 'Caminhe' });
+        }
+      }
+      intervalos.push({ tipo: 'caminhada', segundos: DESAQUECIMENTO, descricao: 'Desaquecimento' });
+      return intervalos;
+    }
+
+    // ====================================================================
+    // 3. AJUDANTES DE TEMPO
+    // ====================================================================
+    function formatarTempo(segundos) {
+      const minutos = Math.floor(segundos / 60);
+      const resto = segundos % 60;
+      if (resto === 0) return minutos + ' min';
+      return minutos + ' min ' + resto + 's';
+    }
+
+    function formatarRelogio(segundos) {
+      const m = Math.floor(segundos / 60);
+      const s = segundos % 60;
+      return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    // ====================================================================
+    // 3.5 SOM E VIBRAÇÃO
+    // O som é gerado na hora pela Web Audio API (sem arquivos).
+    // O áudio só é "destravado" depois de um clique (regra do navegador).
+    // ====================================================================
+    let audioCtx = null;
+
+    function destravarAudio() {
+      if (audioCtx === null) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioCtx();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    // notas: [{ freq: Hz, dur: ms, gap: ms de pausa depois, vol: 0 a 1 }]
+    function tocarSequencia(notas) {
+      if (audioCtx === null) return;
+      let inicio = audioCtx.currentTime;
+      notas.forEach(function (nota) {
+        const osc = audioCtx.createOscillator();
+        const ganho = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = nota.freq;
+        osc.connect(ganho);
+        ganho.connect(audioCtx.destination);
+
+        const dur = nota.dur / 1000;
+        const vol = nota.vol || 0.3;
+        ganho.gain.setValueAtTime(0.0001, inicio);
+        ganho.gain.exponentialRampToValueAtTime(vol, inicio + 0.01);
+        ganho.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+
+        osc.start(inicio);
+        osc.stop(inicio + dur);
+        inicio += dur + (nota.gap || 0) / 1000;
+      });
+    }
+
+    function vibrar(padrao) {
+      if (navigator.vibrate) {
+        navigator.vibrate(padrao);
+      }
+    }
+
+    // Aviso de "vai CORRER": notas subindo + vibração dupla
+    function alertarCorrida() {
+      tocarSequencia([
+        { freq: 660, dur: 150, gap: 40 },
+        { freq: 880, dur: 280 }
+      ]);
+      vibrar([200, 100, 200]);
+    }
+
+    // Aviso de "vai CAMINHAR": notas descendo + vibração longa
+    function alertarCaminhada() {
+      tocarSequencia([
+        { freq: 440, dur: 150, gap: 40 },
+        { freq: 330, dur: 280 }
+      ]);
+      vibrar(400);
+    }
+
+    // Aviso de FIM: três notas subindo + vibração comemorativa
+    function alertarFim() {
+      tocarSequencia([
+        { freq: 523, dur: 150, gap: 30 },
+        { freq: 659, dur: 150, gap: 30 },
+        { freq: 784, dur: 450 }
+      ]);
+      vibrar([300, 100, 300, 100, 300]);
+    }
+
+    // Bip curto da contagem regressiva (3, 2, 1)
+    function bipContagem() {
+      tocarSequencia([{ freq: 520, dur: 90, vol: 0.2 }]);
+      vibrar(80);
+    }
+
+    // ====================================================================
+    // 4. ESTADO DA SESSÃO EM ANDAMENTO
+    // ====================================================================
+    let intervalosSessao = [];
+    let indiceIntervaloAtual = 0;
+    let segundosRestantes = 0;
+    let rodando = false;
+    let concluida = false;
+    let timerId = null;
+    let fimDoIntervalo = 0;
+    let totalSegundosSessao = 0;
+    let elementosLista = [];
+    let ultimoSegundoBip = null;    // evita repetir o bip no mesmo segundo
+
+    const TOTAL_SESSOES = SEMANAS.length * SESSOES_POR_SEMANA;  // 14 x 3 = 42
+    const CHAVE_PROGRESSO = 'treinoCorrida.progresso';          // nome no localStorage
+
+    let posicaoAtual = 0;        // qual sessão está na tela (0 a 41)
+    let sessoesConcluidas = 0;   // quantas já concluí (a próxima pendente é este número)
+    let indiceSemanaAtual = 0;   // calculado a partir de posicaoAtual
+    let numeroSessaoAtual = 1;   // calculado a partir de posicaoAtual
+
+    // ====================================================================
+    // 4.5 PROGRESSO SALVO E NAVEGAÇÃO
+    // localStorage guarda texto que sobrevive a fechar o app.
+    // Salvamos um objeto pequeno, convertido para texto com JSON.
+    // ====================================================================
+    function carregarProgresso() {
+      try {
+        const texto = localStorage.getItem(CHAVE_PROGRESSO);
+        if (!texto) return 0;                 // nunca salvou nada ainda
+        const dados = JSON.parse(texto);      // texto vira objeto
+        const n = dados.concluidas;
+        if (typeof n === 'number' && n >= 0 && n <= TOTAL_SESSOES) return n;
+        return 0;
+      } catch (e) {
+        return 0;   // se a leitura falhar por qualquer motivo, recomeça do zero
+      }
+    }
+
+    function salvarProgresso(n) {
+      try {
+        localStorage.setItem(CHAVE_PROGRESSO, JSON.stringify({ concluidas: n, versao: 1 }));
+      } catch (e) {
+        // se o navegador bloquear o armazenamento, o app segue funcionando na sessão atual
+      }
+    }
+
+    // Converte uma posição (0 a 41) em semana (0 a 13) e número da sessão (1 a 3)
+    function aplicarPosicao(posicao) {
+      posicaoAtual = Math.max(0, Math.min(posicao, TOTAL_SESSOES - 1));
+      indiceSemanaAtual = Math.floor(posicaoAtual / SESSOES_POR_SEMANA);
+      numeroSessaoAtual = (posicaoAtual % SESSOES_POR_SEMANA) + 1;
+    }
+
+    function atualizarNavegacao() {
+      document.getElementById('planoProgresso').textContent =
+        sessoesConcluidas + ' de ' + TOTAL_SESSOES + ' concluídas';
+      document.getElementById('btnAnterior').disabled = rodando || posicaoAtual === 0;
+      document.getElementById('btnProxima').disabled  = rodando || posicaoAtual === TOTAL_SESSOES - 1;
+    }
+
+    function irParaSessao(novaPosicao) {
+      if (rodando) return;            // proíbe trocar de sessão com o treino rodando
+      aplicarPosicao(novaPosicao);
+      prepararSessao();
+    }
+
+    // ====================================================================
+    // 4.6 PWA: MANIFEST E ÍCONE GERADOS NA HORA (sem arquivos extras)
+    // ====================================================================
+    function instalarManifest() {
+      const svg =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">' +
+        '<rect width="512" height="512" rx="96" fill="#0f1115"/>' +
+        '<circle cx="256" cy="256" r="150" fill="none" stroke="#ffb020" stroke-width="40"/>' +
+        '<text x="256" y="300" font-family="sans-serif" font-size="150" font-weight="bold" ' +
+        'fill="#f5f5f5" text-anchor="middle">30</text></svg>';
+      const iconeUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+
+      const manifest = {
+        name: 'Treino de Corrida',
+        short_name: 'Treino',
+        start_url: '.',
+        display: 'standalone',
+        background_color: '#0f1115',
+        theme_color: '#0f1115',
+        orientation: 'portrait',
+        icons: [
+          { src: iconeUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any' }
+        ]
+      };
+      const manifestUrl = URL.createObjectURL(
+        new Blob([JSON.stringify(manifest)], { type: 'application/json' })
+      );
+
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = manifestUrl;
+      document.head.appendChild(link);
+
+      const apple = document.createElement('link');
+      apple.rel = 'apple-touch-icon';
+      apple.href = iconeUrl;
+      document.head.appendChild(apple);
+    }
+
+    // ====================================================================
+    // 4.7 WAKE LOCK: manter a tela acesa durante o treino
+    // ====================================================================
+    let wakeLock = null;
+
+    async function pegarWakeLock() {
+      if (!('wakeLock' in navigator)) {
+        document.getElementById('avisoTela').textContent =
+          'Mantenha a tela acesa manualmente (recurso indisponível aqui)';
+        return;
+      }
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        document.getElementById('avisoTela').textContent = 'Tela travada acesa durante o treino';
+        wakeLock.addEventListener('release', function () {
+          document.getElementById('avisoTela').textContent = '';
+        });
+      } catch (e) {
+        document.getElementById('avisoTela').textContent =
+          'Não foi possível travar a tela (precisa de HTTPS)';
+      }
+    }
+
+    async function soltarWakeLock() {
+      if (wakeLock !== null) {
+        try { await wakeLock.release(); } catch (e) {}
+        wakeLock = null;
+      }
+      document.getElementById('avisoTela').textContent = '';
+    }
+
+    // se o app perde e recupera o foco, o Android solta o lock sozinho.
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && rodando) {
+        pegarWakeLock();
+      }
+    });
+
+    // ====================================================================
+    // 5. PREPARAR A SESSÃO
+    // ====================================================================
+    function prepararSessao() {
+      const semana = SEMANAS[indiceSemanaAtual];
+      intervalosSessao = gerarIntervalos(semana);
+      indiceIntervaloAtual = 0;
+      segundosRestantes = intervalosSessao[0].segundos;
+      rodando = false;
+      concluida = false;
+      ultimoSegundoBip = null;
+      if (timerId !== null) { clearInterval(timerId); timerId = null; }
+
+      totalSegundosSessao = intervalosSessao.reduce(function (soma, b) {
+        return soma + b.segundos;
+      }, 0);
+
+      document.getElementById('tituloSessao').textContent =
+        'Semana ' + (indiceSemanaAtual + 1) +
+        ' · Sessão ' + numeroSessaoAtual + ' de ' + SESSOES_POR_SEMANA;
+
+      renderizarLista();
+      atualizarTela();
+    }
+
+    // ====================================================================
+    // 6. INICIAR / PAUSAR
+    // ====================================================================
+    function alternarPlay() {
+      destravarAudio();              // libera o som usando o gesto do clique
+      if (concluida) return;
+      if (rodando) {
+        pausar();
+      } else {
+        iniciar();
+      }
+    }
+
+    function iniciar() {
+      rodando = true;
+      fimDoIntervalo = Date.now() + segundosRestantes * 1000;
+      timerId = setInterval(tick, 250);
+      pegarWakeLock();
+      atualizarTela();
+    }
+
+    function pausar() {
+      rodando = false;
+      if (timerId !== null) { clearInterval(timerId); timerId = null; }
+      soltarWakeLock();
+      atualizarTela();
+    }
+
+    // ====================================================================
+    // 7. O TICK (pergunta ao relógio quanto falta, não subtrai)
+    // ====================================================================
+    function tick() {
+      const restanteMs = fimDoIntervalo - Date.now();
+      segundosRestantes = Math.max(Math.ceil(restanteMs / 1000), 0);
+
+      if (restanteMs <= 0) {
+        avancarIntervalo();
+        return;
+      }
+
+      // bip nos últimos 3 segundos, uma vez por segundo
+      if (segundosRestantes <= 3 && segundosRestantes !== ultimoSegundoBip) {
+        ultimoSegundoBip = segundosRestantes;
+        bipContagem();
+      }
+
+      atualizarTela();
+    }
+
+    // ====================================================================
+    // 8. AVANÇAR PARA O PRÓXIMO BLOCO (toca o aviso da troca)
+    // ====================================================================
+    function avancarIntervalo() {
+      indiceIntervaloAtual++;
+
+      if (indiceIntervaloAtual >= intervalosSessao.length) {
+        finalizarSessao();
+        return;
+      }
+
+      segundosRestantes = intervalosSessao[indiceIntervaloAtual].segundos;
+      fimDoIntervalo = Date.now() + segundosRestantes * 1000;
+      ultimoSegundoBip = null;
+
+      const novoBloco = intervalosSessao[indiceIntervaloAtual];
+      if (novoBloco.tipo === 'corrida') {
+        alertarCorrida();
+      } else {
+        alertarCaminhada();
+      }
+
+      atualizarTela();
+    }
+
+    function finalizarSessao() {
+      pausar();
+      concluida = true;
+      indiceIntervaloAtual = intervalosSessao.length - 1;
+
+      // só avança se concluiu exatamente a próxima sessão pendente.
+      if (posicaoAtual === sessoesConcluidas) {
+        sessoesConcluidas++;
+        salvarProgresso(sessoesConcluidas);
+      }
+
+      alertarFim();
+      atualizarTela();
+    }
+
+    // ====================================================================
+    // 9. DESENHAR A LISTA DE BLOCOS
+    // ====================================================================
+    function renderizarLista() {
+      const lista = document.getElementById('listaIntervalos');
+      lista.innerHTML = '';
+      elementosLista = [];
+
+      intervalosSessao.forEach(function (intervalo) {
+        const li = document.createElement('li');
+        li.className = intervalo.tipo;
+        li.innerHTML =
+          '<span>' + intervalo.descricao + '</span>' +
+          '<span class="tempo">' + formatarTempo(intervalo.segundos) + '</span>';
+        lista.appendChild(li);
+        elementosLista.push(li);
+      });
+    }
+
+    // ====================================================================
+    // 10. ATUALIZAR A TELA
+    // ====================================================================
+    function atualizarTela() {
+      const bloco = intervalosSessao[indiceIntervaloAtual];
+      const acaoTexto = document.getElementById('acaoTexto');
+      const acaoCartao = document.getElementById('acaoCartao');
+
+      if (concluida) {
+        acaoTexto.textContent = 'Sessão concluída!';
+        acaoCartao.className = 'cartao acaoCartao concluida';
+      } else {
+        acaoTexto.textContent = bloco.descricao;
+        acaoCartao.className = 'cartao acaoCartao ' + bloco.tipo;
+      }
+
+      document.getElementById('tempoRestante').textContent = formatarRelogio(segundosRestantes);
+      document.getElementById('progressoTexto').textContent =
+        'Bloco ' + (indiceIntervaloAtual + 1) + ' de ' + intervalosSessao.length;
+      document.getElementById('btnIniciar').textContent = rodando ? 'Pausar' : 'Iniciar';
+
+      // barra de progresso geral
+      const decorrido = segundosDecorridos();
+      const pct = Math.min((decorrido / totalSegundosSessao) * 100, 100);
+      document.getElementById('barraPreenchida').style.width = pct + '%';
+
+      // tempo total da sessao (decorrido / total e quanto falta)
+      const restanteTotal = Math.max(totalSegundosSessao - decorrido, 0);
+      document.getElementById('tempoTotalDecorrido').textContent =
+        formatarRelogio(decorrido) + ' / ' + formatarRelogio(totalSegundosSessao);
+      document.getElementById('tempoTotalRestante').textContent =
+        'faltam ' + formatarRelogio(restanteTotal);
+
+      destacarBlocoAtual();
+      atualizarNavegacao();
+    }
+
+    function segundosDecorridos() {
+      let decorrido = 0;
+      for (let i = 0; i < indiceIntervaloAtual; i++) {
+        decorrido += intervalosSessao[i].segundos;
+      }
+      decorrido += (intervalosSessao[indiceIntervaloAtual].segundos - segundosRestantes);
+      return decorrido;
+    }
+
+    function destacarBlocoAtual() {
+      elementosLista.forEach(function (li, indice) {
+        if (indice === indiceIntervaloAtual && !concluida) {
+          li.classList.add('ativo');
+        } else {
+          li.classList.remove('ativo');
+        }
+      });
+    }
+
+    // ====================================================================
+    // 11. LIGAR OS BOTÕES E ARRANCAR
+    // ====================================================================
+    instalarManifest();
+
+    document.getElementById('btnIniciar').addEventListener('click', alternarPlay);
+    document.getElementById('btnReiniciar').addEventListener('click', prepararSessao);
+
+    document.getElementById('btnAnterior').addEventListener('click', function () {
+      irParaSessao(posicaoAtual - 1);
+    });
+    document.getElementById('btnProxima').addEventListener('click', function () {
+      irParaSessao(posicaoAtual + 1);
+    });
+
+    document.getElementById('btnZerar').addEventListener('click', function () {
+      if (rodando) return;
+      const ok = confirm('Zerar todo o progresso e voltar para a Semana 1?');
+      if (!ok) return;
+      try { localStorage.removeItem(CHAVE_PROGRESSO); } catch (e) {}
+      sessoesConcluidas = 0;
+      aplicarPosicao(0);
+      prepararSessao();
+    });
+
+    // arranque: lê o progresso salvo e abre na próxima sessão pendente
+    sessoesConcluidas = carregarProgresso();
+    aplicarPosicao(sessoesConcluidas);
+    prepararSessao();
+  </script>
+
+
+</body></html>
