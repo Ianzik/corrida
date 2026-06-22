@@ -2,159 +2,178 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Treino de Corrida</title>
-  <meta name="theme-color" content="#0f1115">
+  <meta name="theme-color" content="#cce5fb">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Treino">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* ================================================================
+       PAINEL DE CONTROLE DO VISUAL (design tokens)
+       ================================================================ */
+    :root {
+      --surface: #ffffff;
+      --ink: #1b1f1d;
+      --ink-soft: #8a9296;
+      --line: #e8edee;
 
-    body {
-      font-family: system-ui, sans-serif;
-      background: #0f1115;
-      color: #f5f5f5;
-      padding: 20px;
-      max-width: 520px;
-      margin: 0 auto;
+      --accent: #2fbf4f;        /* verde Bevel */
+
+      --run-bg: #e7f7ea;   --run-ink: #1ea33f;
+      --walk-bg: #e7f1fc;  --walk-ink: #2f86d6;
+      --done-bg: #e7f7ea;  --done-ink: #1ea33f;
+
+      /* tons de cinza do trilho segmentado, por fase */
+      --seg-aquece: #dfe5e7;    /* aquecimento / desaquecimento: mais claro */
+      --seg-caminha: #c4ccce;   /* caminhada: médio */
+      --seg-corre: #9aa4a6;     /* corrida: mais escuro */
+
+      --radius-lg: 30px;
+      --radius-md: 18px;
+      --shadow: 0 4px 22px rgba(40,60,80,.08), 0 1px 3px rgba(40,60,80,.05);
+      --gap: 16px;
     }
 
-    h1 { font-size: 20px; margin-bottom: 4px; }
-    .subtitulo { color: #9aa0aa; font-size: 14px; margin-bottom: 20px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { overscroll-behavior: none; }  /* desliga o "puxar para atualizar" */
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: var(--ink);
+      padding: 26px 20px 40px;
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      background:
+        radial-gradient(100% 70% at 15% 96%, rgba(120,225,180,.45), transparent 55%),
+        radial-gradient(110% 70% at 52% 100%, rgba(255,205,150,.50), transparent 55%),
+        radial-gradient(100% 70% at 88% 92%, rgba(255,170,210,.45), transparent 55%),
+        linear-gradient(180deg, #c9e4fb 0%, #dfeefb 30%, #eef4f3 60%, #f6f3ee 100%);
+      background-attachment: fixed;
+    }
+
+    header { text-align: center; margin-bottom: 24px; }
+    h1 { font-size: 27px; font-weight: 800; letter-spacing: -0.6px; }
+    .subtitulo { color: var(--ink-soft); font-size: 15px; margin-top: 6px; }
 
     .cartao {
-      background: #1a1d24;
-      border-radius: 14px;
-      padding: 18px;
-      margin-bottom: 16px;
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      margin-bottom: var(--gap);
+      box-shadow: var(--shadow);
     }
 
     .rotulo {
-      color: #9aa0aa;
-      font-size: 13px;
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 1.2px;
     }
 
-    .destaque { font-size: 22px; font-weight: 700; margin-top: 4px; }
+    .destaque { font-size: 20px; font-weight: 700; margin-top: 6px; letter-spacing: -0.3px; }
 
-    /* Cartao grande do cronometro */
-    .acaoCartao { text-align: center; }
-    .acaoTexto { font-size: 28px; font-weight: 800; letter-spacing: 1px; }
+    /* Cartão do cronômetro com anel */
+    .acaoCartao { text-align: center; padding: 24px 22px; }
+
+    .cronoLinha {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .ringWrap { position: relative; width: 240px; height: 240px; flex: 0 0 auto; }
+    .ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .ringSeg { fill: none; stroke-width: 14; }
+    .ringProg {
+      fill: none; stroke-width: 14; stroke-linecap: round;
+      stroke: var(--walk-ink);
+      transition: stroke-dashoffset .25s linear, stroke .3s ease;
+    }
+    .ringCenter {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .acaoTexto {
+      font-size: 16px; font-weight: 800;
+      letter-spacing: 0.3px; color: var(--walk-ink);
+    }
     .tempoRestante {
-      font-size: 64px;
-      font-weight: 800;
+      font-size: 50px; font-weight: 800;
       font-variant-numeric: tabular-nums;
-      margin-top: 8px;
+      letter-spacing: -1.5px; margin-top: 2px; color: var(--ink);
     }
-    .acaoCartao.corrida { background: #2a1820; }
-    .acaoCartao.corrida .acaoTexto { color: #ff6b81; }
-    .acaoCartao.caminhada { background: #16212a; }
-    .acaoCartao.caminhada .acaoTexto { color: #6bd0ff; }
-    .acaoCartao.concluida { background: #16291c; }
-    .acaoCartao.concluida .acaoTexto { color: #5cd98a; }
+
+    .acaoCartao.corrida .acaoTexto { color: var(--run-ink); }
+    .acaoCartao.corrida .ringProg { stroke: var(--run-ink); }
+    .acaoCartao.caminhada .acaoTexto { color: var(--walk-ink); }
+    .acaoCartao.caminhada .ringProg { stroke: var(--walk-ink); }
+    .acaoCartao.concluida .acaoTexto { color: var(--done-ink); }
+    .acaoCartao.concluida .ringProg { stroke: var(--done-ink); }
+
+    /* setas de pular bloco */
+    .pular {
+      flex: 0 0 auto; width: 38px; height: 38px; border-radius: 999px;
+      background: #f1f5f6; color: var(--ink); border: none;
+      font-size: 18px; font-weight: 700; cursor: pointer; line-height: 1;
+    }
+    .pular:disabled { opacity: 0.25; cursor: default; }
+
+    #avisoTela { font-size: 12px; color: var(--ink-soft); margin-top: 14px; min-height: 16px; }
 
     /* Barra de progresso geral */
-    .barra {
-      background: #2a2e38;
-      border-radius: 999px;
-      height: 10px;
-      overflow: hidden;
-      margin-top: 10px;
-    }
-    .barraPreenchida {
-      background: #ffb020;
-      height: 100%;
-      width: 0%;
-      transition: width 0.25s linear;
-    }
+    .barra { background: #ecf0f1; border-radius: 999px; height: 8px; overflow: hidden; margin-top: 12px; }
+    .barraPreenchida { background: var(--accent); height: 100%; width: 0%; border-radius: 999px; transition: width 0.25s linear; }
 
-    /* Linha de tempo total da sessao */
     .tempoTotalLinha {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 10px;
-      font-size: 14px;
-      color: #cfd3da;
-      font-variant-numeric: tabular-nums;
+      display: flex; justify-content: space-between; margin-top: 12px;
+      font-size: 14px; color: var(--ink); font-variant-numeric: tabular-nums;
     }
-    .tempoTotalLinha .faltam { color: #9aa0aa; }
+    .tempoTotalLinha .faltam { color: var(--ink-soft); }
 
-    /* Botoes */
-    .botoes { display: flex; gap: 10px; margin-bottom: 16px; }
+    .botoes { display: flex; gap: 12px; margin-bottom: var(--gap); }
     button {
-      flex: 1;
-      padding: 16px;
-      font-size: 17px;
-      font-weight: 700;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      color: #0f1115;
+      flex: 1; padding: 18px; font-size: 16px; font-weight: 700;
+      border: none; border-radius: 999px; cursor: pointer;
+      transition: transform .05s ease, opacity .2s ease;
     }
-    #btnIniciar { background: #ffb020; }
-    #btnReiniciar { background: #3a3f4b; color: #f5f5f5; }
+    button:active { transform: scale(0.98); }
+    #btnIniciar { background: var(--ink); color: #fff; }
+    #btnReiniciar { background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); }
 
-    /* Navegação entre sessões */
-    .navSessao {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 14px;
-      gap: 10px;
-    }
-    .navSessao #planoProgresso {
-      flex: 1;
-      text-align: center;
-      font-size: 13px;
-      color: #9aa0aa;
-    }
+    .navSessao { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; gap: 10px; }
+    .navSessao #planoProgresso { flex: 1; text-align: center; font-size: 13px; color: var(--ink-soft); }
     .navBtn {
-      flex: 0 0 auto;
-      padding: 8px 12px;
-      font-size: 14px;
-      font-weight: 700;
-      background: #2a2e38;
-      color: #f5f5f5;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
+      flex: 0 0 auto; padding: 9px 14px; font-size: 14px; font-weight: 700;
+      background: #f1f5f6; color: var(--ink); border: none; border-radius: 999px; cursor: pointer;
     }
-    .navBtn:disabled { opacity: 0.35; cursor: default; }
+    .navBtn:disabled { opacity: 0.3; cursor: default; }
 
-    /* Rodapé */
-    .rodape { text-align: center; margin-top: 4px; }
+    .rodape { text-align: center; margin-top: 8px; }
     .linkBtn {
-      flex: 0 0 auto;
-      background: none;
-      color: #6b7280;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 8px;
-      text-decoration: underline;
-      cursor: pointer;
+      background: none; color: var(--ink-soft); font-size: 13px; font-weight: 600;
+      padding: 8px; text-decoration: underline; cursor: pointer;
     }
 
-    /* Lista de blocos */
-    ul { list-style: none; margin-top: 12px; }
+    ul { list-style: none; margin-top: 14px; }
     li {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 12px;
-      border-radius: 10px;
-      margin-bottom: 6px;
-      font-size: 15px;
+      display: flex; justify-content: space-between;
+      padding: 13px 16px; border-radius: var(--radius-md);
+      margin-bottom: 8px; font-size: 15px; font-weight: 500;
     }
-    li.corrida { background: #2a1820; color: #ff6b81; }
-    li.caminhada { background: #16212a; color: #6bd0ff; }
-    li.ativo { outline: 2px solid #ffb020; }
+    li.corrida { background: var(--run-bg); color: var(--run-ink); }
+    li.caminhada { background: var(--walk-bg); color: var(--walk-ink); }
+    li.ativo { box-shadow: inset 0 0 0 2px var(--accent); }
     .tempo { font-weight: 700; }
   </style>
 </head>
 <body>
 
-  <h1>Treino de Corrida</h1>
-  <p class="subtitulo">Do zero aos 30 minutos contínuos</p>
+  <header>
+    <h1>Treino de Corrida</h1>
+    <p class="subtitulo">Do zero aos 30 minutos contínuos</p>
+  </header>
 
   <div class="cartao">
     <div class="rotulo">Sessão atual</div>
@@ -167,9 +186,21 @@
   </div>
 
   <div class="cartao acaoCartao" id="acaoCartao">
-    <div class="acaoTexto" id="acaoTexto">Pronto?</div>
-    <div class="tempoRestante" id="tempoRestante">00:00</div>
-    <div id="avisoTela" style="font-size:12px;color:#9aa0aa;margin-top:8px;min-height:16px;"></div>
+    <div class="cronoLinha">
+      <button class="pular" id="btnPularAnt" title="Bloco anterior">‹</button>
+      <div class="ringWrap">
+        <svg class="ring" viewBox="0 0 240 240">
+          <g id="ringSegmentos"></g>
+          <circle class="ringProg" id="ringProg" cx="120" cy="120" r="110"></circle>
+        </svg>
+        <div class="ringCenter">
+          <div class="acaoTexto" id="acaoTexto">Pronto?</div>
+          <div class="tempoRestante" id="tempoRestante">00:00</div>
+        </div>
+      </div>
+      <button class="pular" id="btnPularProx" title="Próximo bloco">›</button>
+    </div>
+    <div id="avisoTela"></div>
   </div>
 
   <div class="cartao">
@@ -198,45 +229,65 @@
   <script>
     // ====================================================================
     // 1. OS DADOS DO PLANO
-    //   runSeconds          = duração de cada corrida, em segundos
-    //   runReps             = quantas corridas a sessão tem
-    //   walkBetweenSeconds  = caminhada de descanso entre as corridas
     // ====================================================================
     const SEMANAS = [
-      { runSeconds: 60,   runReps: 6, walkBetweenSeconds: 120 }, // Semana 1
-      { runSeconds: 90,   runReps: 6, walkBetweenSeconds: 120 }, // Semana 2
-      { runSeconds: 120,  runReps: 6, walkBetweenSeconds: 120 }, // Semana 3
-      { runSeconds: 180,  runReps: 5, walkBetweenSeconds: 120 }, // Semana 4
-      { runSeconds: 240,  runReps: 4, walkBetweenSeconds: 120 }, // Semana 5
-      { runSeconds: 300,  runReps: 4, walkBetweenSeconds: 120 }, // Semana 6
-      { runSeconds: 420,  runReps: 3, walkBetweenSeconds: 120 }, // Semana 7
-      { runSeconds: 540,  runReps: 3, walkBetweenSeconds: 120 }, // Semana 8
-      { runSeconds: 720,  runReps: 2, walkBetweenSeconds: 120 }, // Semana 9
-      { runSeconds: 900,  runReps: 2, walkBetweenSeconds: 120 }, // Semana 10
-      { runSeconds: 1080, runReps: 1, walkBetweenSeconds: 0 },   // Semana 11
-      { runSeconds: 1320, runReps: 1, walkBetweenSeconds: 0 },   // Semana 12
-      { runSeconds: 1560, runReps: 1, walkBetweenSeconds: 0 },   // Semana 13
-      { runSeconds: 1800, runReps: 1, walkBetweenSeconds: 0 },   // Semana 14
+      { runSeconds: 60,   runReps: 6, walkBetweenSeconds: 120 },
+      { runSeconds: 90,   runReps: 6, walkBetweenSeconds: 120 },
+      { runSeconds: 120,  runReps: 6, walkBetweenSeconds: 120 },
+      { runSeconds: 180,  runReps: 5, walkBetweenSeconds: 120 },
+      { runSeconds: 240,  runReps: 4, walkBetweenSeconds: 120 },
+      { runSeconds: 300,  runReps: 4, walkBetweenSeconds: 120 },
+      { runSeconds: 420,  runReps: 3, walkBetweenSeconds: 120 },
+      { runSeconds: 540,  runReps: 3, walkBetweenSeconds: 120 },
+      { runSeconds: 720,  runReps: 2, walkBetweenSeconds: 120 },
+      { runSeconds: 900,  runReps: 2, walkBetweenSeconds: 120 },
+      { runSeconds: 1080, runReps: 1, walkBetweenSeconds: 0 },
+      { runSeconds: 1320, runReps: 1, walkBetweenSeconds: 0 },
+      { runSeconds: 1560, runReps: 1, walkBetweenSeconds: 0 },
+      { runSeconds: 1800, runReps: 1, walkBetweenSeconds: 0 },
     ];
 
-    const AQUECIMENTO = 300;        // 5 minutos de caminhada no início
-    const DESAQUECIMENTO = 300;     // 5 minutos de caminhada no fim
+    const AQUECIMENTO = 300;
+    const DESAQUECIMENTO = 300;
     const SESSOES_POR_SEMANA = 3;
 
     // ====================================================================
     // 2. FÁBRICA DE INTERVALOS
+    // Cada bloco agora carrega: tipo, fase, segundos, rep, repTotal, descricao
     // ====================================================================
     function gerarIntervalos(semana) {
       const intervalos = [];
-      intervalos.push({ tipo: 'caminhada', segundos: AQUECIMENTO, descricao: 'Aquecimento' });
+      // quantas caminhadas de descanso existem (entre as corridas)
+      const totalCaminhadas = (semana.walkBetweenSeconds > 0) ? (semana.runReps - 1) : 0;
+
+      intervalos.push({
+        tipo: 'caminhada', fase: 'aquecimento', segundos: AQUECIMENTO,
+        rep: 0, repTotal: 0, descricao: 'Aquecimento'
+      });
+
+      let caminhadaN = 0;
       for (let i = 0; i < semana.runReps; i++) {
-        intervalos.push({ tipo: 'corrida', segundos: semana.runSeconds, descricao: 'Corra' });
+        intervalos.push({
+          tipo: 'corrida', fase: 'corrida', segundos: semana.runSeconds,
+          rep: i + 1, repTotal: semana.runReps,
+          descricao: semana.runReps > 1 ? ('Corra ' + (i + 1) + '/' + semana.runReps) : 'Corra'
+        });
+
         const ehUltimaCorrida = (i === semana.runReps - 1);
         if (!ehUltimaCorrida && semana.walkBetweenSeconds > 0) {
-          intervalos.push({ tipo: 'caminhada', segundos: semana.walkBetweenSeconds, descricao: 'Caminhe' });
+          caminhadaN++;
+          intervalos.push({
+            tipo: 'caminhada', fase: 'caminhada', segundos: semana.walkBetweenSeconds,
+            rep: caminhadaN, repTotal: totalCaminhadas,
+            descricao: totalCaminhadas > 1 ? ('Caminhe ' + caminhadaN + '/' + totalCaminhadas) : 'Caminhe'
+          });
         }
       }
-      intervalos.push({ tipo: 'caminhada', segundos: DESAQUECIMENTO, descricao: 'Desaquecimento' });
+
+      intervalos.push({
+        tipo: 'caminhada', fase: 'desaquecimento', segundos: DESAQUECIMENTO,
+        rep: 0, repTotal: 0, descricao: 'Desaquecimento'
+      });
       return intervalos;
     }
 
@@ -258,8 +309,6 @@
 
     // ====================================================================
     // 3.5 SOM E VIBRAÇÃO
-    // O som é gerado na hora pela Web Audio API (sem arquivos).
-    // O áudio só é "destravado" depois de um clique (regra do navegador).
     // ====================================================================
     let audioCtx = null;
 
@@ -268,12 +317,9 @@
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         audioCtx = new AudioCtx();
       }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
+      if (audioCtx.state === 'suspended') { audioCtx.resume(); }
     }
 
-    // notas: [{ freq: Hz, dur: ms, gap: ms de pausa depois, vol: 0 a 1 }]
     function tocarSequencia(notas) {
       if (audioCtx === null) return;
       let inicio = audioCtx.currentTime;
@@ -284,61 +330,38 @@
         osc.frequency.value = nota.freq;
         osc.connect(ganho);
         ganho.connect(audioCtx.destination);
-
         const dur = nota.dur / 1000;
         const vol = nota.vol || 0.3;
         ganho.gain.setValueAtTime(0.0001, inicio);
         ganho.gain.exponentialRampToValueAtTime(vol, inicio + 0.01);
         ganho.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
-
         osc.start(inicio);
         osc.stop(inicio + dur);
         inicio += dur + (nota.gap || 0) / 1000;
       });
     }
 
-    function vibrar(padrao) {
-      if (navigator.vibrate) {
-        navigator.vibrate(padrao);
-      }
-    }
+    function vibrar(padrao) { if (navigator.vibrate) { navigator.vibrate(padrao); } }
 
-    // Aviso de "vai CORRER": notas subindo + vibração dupla
     function alertarCorrida() {
-      tocarSequencia([
-        { freq: 660, dur: 150, gap: 40 },
-        { freq: 880, dur: 280 }
-      ]);
+      tocarSequencia([{ freq: 660, dur: 150, gap: 40 }, { freq: 880, dur: 280 }]);
       vibrar([200, 100, 200]);
     }
-
-    // Aviso de "vai CAMINHAR": notas descendo + vibração longa
     function alertarCaminhada() {
-      tocarSequencia([
-        { freq: 440, dur: 150, gap: 40 },
-        { freq: 330, dur: 280 }
-      ]);
+      tocarSequencia([{ freq: 440, dur: 150, gap: 40 }, { freq: 330, dur: 280 }]);
       vibrar(400);
     }
-
-    // Aviso de FIM: três notas subindo + vibração comemorativa
     function alertarFim() {
-      tocarSequencia([
-        { freq: 523, dur: 150, gap: 30 },
-        { freq: 659, dur: 150, gap: 30 },
-        { freq: 784, dur: 450 }
-      ]);
+      tocarSequencia([{ freq: 523, dur: 150, gap: 30 }, { freq: 659, dur: 150, gap: 30 }, { freq: 784, dur: 450 }]);
       vibrar([300, 100, 300, 100, 300]);
     }
-
-    // Bip curto da contagem regressiva (3, 2, 1)
     function bipContagem() {
       tocarSequencia([{ freq: 520, dur: 90, vol: 0.2 }]);
       vibrar(80);
     }
 
     // ====================================================================
-    // 4. ESTADO DA SESSÃO EM ANDAMENTO
+    // 4. ESTADO DA SESSÃO
     // ====================================================================
     let intervalosSessao = [];
     let indiceIntervaloAtual = 0;
@@ -349,43 +372,38 @@
     let fimDoIntervalo = 0;
     let totalSegundosSessao = 0;
     let elementosLista = [];
-    let ultimoSegundoBip = null;    // evita repetir o bip no mesmo segundo
+    let ultimoSegundoBip = null;
 
-    const TOTAL_SESSOES = SEMANAS.length * SESSOES_POR_SEMANA;  // 14 x 3 = 42
-    const CHAVE_PROGRESSO = 'treinoCorrida.progresso';          // nome no localStorage
+    const TOTAL_SESSOES = SEMANAS.length * SESSOES_POR_SEMANA;
+    const CHAVE_PROGRESSO = 'treinoCorrida.progresso';
+    const RAIO = 110;
+    const CIRCUNFERENCIA = 2 * Math.PI * RAIO;
 
-    let posicaoAtual = 0;        // qual sessão está na tela (0 a 41)
-    let sessoesConcluidas = 0;   // quantas já concluí (a próxima pendente é este número)
-    let indiceSemanaAtual = 0;   // calculado a partir de posicaoAtual
-    let numeroSessaoAtual = 1;   // calculado a partir de posicaoAtual
+    let posicaoAtual = 0;
+    let sessoesConcluidas = 0;
+    let indiceSemanaAtual = 0;
+    let numeroSessaoAtual = 1;
 
     // ====================================================================
     // 4.5 PROGRESSO SALVO E NAVEGAÇÃO
-    // localStorage guarda texto que sobrevive a fechar o app.
-    // Salvamos um objeto pequeno, convertido para texto com JSON.
     // ====================================================================
     function carregarProgresso() {
       try {
         const texto = localStorage.getItem(CHAVE_PROGRESSO);
-        if (!texto) return 0;                 // nunca salvou nada ainda
-        const dados = JSON.parse(texto);      // texto vira objeto
+        if (!texto) return 0;
+        const dados = JSON.parse(texto);
         const n = dados.concluidas;
         if (typeof n === 'number' && n >= 0 && n <= TOTAL_SESSOES) return n;
         return 0;
-      } catch (e) {
-        return 0;   // se a leitura falhar por qualquer motivo, recomeça do zero
-      }
+      } catch (e) { return 0; }
     }
 
     function salvarProgresso(n) {
       try {
         localStorage.setItem(CHAVE_PROGRESSO, JSON.stringify({ concluidas: n, versao: 1 }));
-      } catch (e) {
-        // se o navegador bloquear o armazenamento, o app segue funcionando na sessão atual
-      }
+      } catch (e) {}
     }
 
-    // Converte uma posição (0 a 41) em semana (0 a 13) e número da sessão (1 a 3)
     function aplicarPosicao(posicao) {
       posicaoAtual = Math.max(0, Math.min(posicao, TOTAL_SESSOES - 1));
       indiceSemanaAtual = Math.floor(posicaoAtual / SESSOES_POR_SEMANA);
@@ -400,59 +418,44 @@
     }
 
     function irParaSessao(novaPosicao) {
-      if (rodando) return;            // proíbe trocar de sessão com o treino rodando
+      if (rodando) return;
       aplicarPosicao(novaPosicao);
       prepararSessao();
     }
 
     // ====================================================================
-    // 4.6 PWA: MANIFEST E ÍCONE GERADOS NA HORA (sem arquivos extras)
+    // 4.6 PWA: MANIFEST E ÍCONE
     // ====================================================================
     function instalarManifest() {
       const svg =
         '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">' +
-        '<rect width="512" height="512" rx="96" fill="#0f1115"/>' +
-        '<circle cx="256" cy="256" r="150" fill="none" stroke="#ffb020" stroke-width="40"/>' +
+        '<rect width="512" height="512" rx="96" fill="#eef4f3"/>' +
+        '<circle cx="256" cy="256" r="150" fill="none" stroke="#2fbf4f" stroke-width="40"/>' +
         '<text x="256" y="300" font-family="sans-serif" font-size="150" font-weight="bold" ' +
-        'fill="#f5f5f5" text-anchor="middle">30</text></svg>';
+        'fill="#1b1f1d" text-anchor="middle">30</text></svg>';
       const iconeUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
-
       const manifest = {
-        name: 'Treino de Corrida',
-        short_name: 'Treino',
-        start_url: '.',
-        display: 'standalone',
-        background_color: '#0f1115',
-        theme_color: '#0f1115',
+        name: 'Treino de Corrida', short_name: 'Treino', start_url: '.',
+        display: 'standalone', background_color: '#eef4f3', theme_color: '#cce5fb',
         orientation: 'portrait',
-        icons: [
-          { src: iconeUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any' }
-        ]
+        icons: [{ src: iconeUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any' }]
       };
-      const manifestUrl = URL.createObjectURL(
-        new Blob([JSON.stringify(manifest)], { type: 'application/json' })
-      );
-
+      const manifestUrl = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
       const link = document.createElement('link');
-      link.rel = 'manifest';
-      link.href = manifestUrl;
+      link.rel = 'manifest'; link.href = manifestUrl;
       document.head.appendChild(link);
-
       const apple = document.createElement('link');
-      apple.rel = 'apple-touch-icon';
-      apple.href = iconeUrl;
+      apple.rel = 'apple-touch-icon'; apple.href = iconeUrl;
       document.head.appendChild(apple);
     }
 
     // ====================================================================
-    // 4.7 WAKE LOCK: manter a tela acesa durante o treino
+    // 4.7 WAKE LOCK
     // ====================================================================
     let wakeLock = null;
-
     async function pegarWakeLock() {
       if (!('wakeLock' in navigator)) {
-        document.getElementById('avisoTela').textContent =
-          'Mantenha a tela acesa manualmente (recurso indisponível aqui)';
+        document.getElementById('avisoTela').textContent = 'Mantenha a tela acesa manualmente (recurso indisponível aqui)';
         return;
       }
       try {
@@ -462,11 +465,9 @@
           document.getElementById('avisoTela').textContent = '';
         });
       } catch (e) {
-        document.getElementById('avisoTela').textContent =
-          'Não foi possível travar a tela (precisa de HTTPS)';
+        document.getElementById('avisoTela').textContent = 'Não foi possível travar a tela (precisa de HTTPS)';
       }
     }
-
     async function soltarWakeLock() {
       if (wakeLock !== null) {
         try { await wakeLock.release(); } catch (e) {}
@@ -474,16 +475,12 @@
       }
       document.getElementById('avisoTela').textContent = '';
     }
-
-    // se o app perde e recupera o foco, o Android solta o lock sozinho.
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible' && rodando) {
-        pegarWakeLock();
-      }
+      if (document.visibilityState === 'visible' && rodando) { pegarWakeLock(); }
     });
 
     // ====================================================================
-    // 5. PREPARAR A SESSÃO
+    // 5. PREPARAR A SESSÃO (monta o trilho segmentado uma vez)
     // ====================================================================
     function prepararSessao() {
       const semana = SEMANAS[indiceSemanaAtual];
@@ -495,31 +492,56 @@
       ultimoSegundoBip = null;
       if (timerId !== null) { clearInterval(timerId); timerId = null; }
 
-      totalSegundosSessao = intervalosSessao.reduce(function (soma, b) {
-        return soma + b.segundos;
-      }, 0);
+      totalSegundosSessao = intervalosSessao.reduce(function (soma, b) { return soma + b.segundos; }, 0);
 
       document.getElementById('tituloSessao').textContent =
-        'Semana ' + (indiceSemanaAtual + 1) +
-        ' · Sessão ' + numeroSessaoAtual + ' de ' + SESSOES_POR_SEMANA;
+        'Semana ' + (indiceSemanaAtual + 1) + ' · Sessão ' + numeroSessaoAtual + ' de ' + SESSOES_POR_SEMANA;
 
+      desenharTrilhoSegmentado();
       renderizarLista();
       atualizarTela();
+    }
+
+    // Desenha um arquinho cinza por bloco, com uma cor de cinza por fase.
+    function corDaFase(fase) {
+      if (fase === 'corrida') return getComputedStyle(document.documentElement).getPropertyValue('--seg-corre');
+      if (fase === 'caminhada') return getComputedStyle(document.documentElement).getPropertyValue('--seg-caminha');
+      return getComputedStyle(document.documentElement).getPropertyValue('--seg-aquece');
+    }
+
+    function desenharTrilhoSegmentado() {
+      const g = document.getElementById('ringSegmentos');
+      g.innerHTML = '';
+      const folga = 4;  // pequeno espaço (em unidades de comprimento) entre os arcos
+      let posicao = 0;  // comprimento acumulado ao longo do círculo
+
+      intervalosSessao.forEach(function (bloco) {
+        const comprimento = (bloco.segundos / totalSegundosSessao) * CIRCUNFERENCIA;
+        const visivel = Math.max(comprimento - folga, 1);
+
+        const arco = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        arco.setAttribute('class', 'ringSeg');
+        arco.setAttribute('cx', '120');
+        arco.setAttribute('cy', '120');
+        arco.setAttribute('r', String(RAIO));
+        arco.setAttribute('stroke', corDaFase(bloco.fase).trim());
+        // dasharray: "trecho visível" seguido de "resto invisível"
+        arco.setAttribute('stroke-dasharray', visivel + ' ' + (CIRCUNFERENCIA - visivel));
+        arco.setAttribute('stroke-dashoffset', String(-posicao));
+        g.appendChild(arco);
+
+        posicao += comprimento;
+      });
     }
 
     // ====================================================================
     // 6. INICIAR / PAUSAR
     // ====================================================================
     function alternarPlay() {
-      destravarAudio();              // libera o som usando o gesto do clique
+      destravarAudio();
       if (concluida) return;
-      if (rodando) {
-        pausar();
-      } else {
-        iniciar();
-      }
+      if (rodando) { pausar(); } else { iniciar(); }
     }
-
     function iniciar() {
       rodando = true;
       fimDoIntervalo = Date.now() + segundosRestantes * 1000;
@@ -527,7 +549,6 @@
       pegarWakeLock();
       atualizarTela();
     }
-
     function pausar() {
       rodando = false;
       if (timerId !== null) { clearInterval(timerId); timerId = null; }
@@ -536,49 +557,50 @@
     }
 
     // ====================================================================
-    // 7. O TICK (pergunta ao relógio quanto falta, não subtrai)
+    // 7. O TICK
     // ====================================================================
     function tick() {
       const restanteMs = fimDoIntervalo - Date.now();
       segundosRestantes = Math.max(Math.ceil(restanteMs / 1000), 0);
-
-      if (restanteMs <= 0) {
-        avancarIntervalo();
-        return;
-      }
-
-      // bip nos últimos 3 segundos, uma vez por segundo
+      if (restanteMs <= 0) { avancarIntervalo(true); return; }
       if (segundosRestantes <= 3 && segundosRestantes !== ultimoSegundoBip) {
         ultimoSegundoBip = segundosRestantes;
         bipContagem();
       }
-
       atualizarTela();
     }
 
     // ====================================================================
-    // 8. AVANÇAR PARA O PRÓXIMO BLOCO (toca o aviso da troca)
+    // 8. AVANÇAR / PULAR BLOCO
+    // comAlerta = true toca o som (virada natural). Pulo manual também alerta.
     // ====================================================================
-    function avancarIntervalo() {
+    function avancarIntervalo(comAlerta) {
       indiceIntervaloAtual++;
-
       if (indiceIntervaloAtual >= intervalosSessao.length) {
         finalizarSessao();
         return;
       }
+      entrarNoBloco(comAlerta);
+    }
 
+    function entrarNoBloco(comAlerta) {
       segundosRestantes = intervalosSessao[indiceIntervaloAtual].segundos;
       fimDoIntervalo = Date.now() + segundosRestantes * 1000;
       ultimoSegundoBip = null;
-
-      const novoBloco = intervalosSessao[indiceIntervaloAtual];
-      if (novoBloco.tipo === 'corrida') {
-        alertarCorrida();
-      } else {
-        alertarCaminhada();
+      if (comAlerta) {
+        const b = intervalosSessao[indiceIntervaloAtual];
+        if (b.tipo === 'corrida') { alertarCorrida(); } else { alertarCaminhada(); }
       }
-
       atualizarTela();
+    }
+
+    // pulo manual pelas setas, funciona rodando ou pausado
+    function pularBloco(direcao) {
+      if (concluida) return;
+      const novo = indiceIntervaloAtual + direcao;
+      if (novo < 0 || novo >= intervalosSessao.length) return;
+      indiceIntervaloAtual = novo;
+      entrarNoBloco(true);
     }
 
     function finalizarSessao() {
@@ -586,9 +608,10 @@
       concluida = true;
       indiceIntervaloAtual = intervalosSessao.length - 1;
 
-      // só avança se concluiu exatamente a próxima sessão pendente.
-      if (posicaoAtual === sessoesConcluidas) {
-        sessoesConcluidas++;
+      // NOVA REGRA: concluir marca como feitas todas até esta sessão.
+      // Avança para frente, nunca retrocede ao repetir uma antiga.
+      if (posicaoAtual + 1 > sessoesConcluidas) {
+        sessoesConcluidas = posicaoAtual + 1;
         salvarProgresso(sessoesConcluidas);
       }
 
@@ -597,18 +620,16 @@
     }
 
     // ====================================================================
-    // 9. DESENHAR A LISTA DE BLOCOS
+    // 9. LISTA DE BLOCOS
     // ====================================================================
     function renderizarLista() {
       const lista = document.getElementById('listaIntervalos');
       lista.innerHTML = '';
       elementosLista = [];
-
       intervalosSessao.forEach(function (intervalo) {
         const li = document.createElement('li');
         li.className = intervalo.tipo;
-        li.innerHTML =
-          '<span>' + intervalo.descricao + '</span>' +
+        li.innerHTML = '<span>' + intervalo.descricao + '</span>' +
           '<span class="tempo">' + formatarTempo(intervalo.segundos) + '</span>';
         lista.appendChild(li);
         elementosLista.push(li);
@@ -624,7 +645,7 @@
       const acaoCartao = document.getElementById('acaoCartao');
 
       if (concluida) {
-        acaoTexto.textContent = 'Sessão concluída!';
+        acaoTexto.textContent = 'Concluída!';
         acaoCartao.className = 'cartao acaoCartao concluida';
       } else {
         acaoTexto.textContent = bloco.descricao;
@@ -636,12 +657,21 @@
         'Bloco ' + (indiceIntervaloAtual + 1) + ' de ' + intervalosSessao.length;
       document.getElementById('btnIniciar').textContent = rodando ? 'Pausar' : 'Iniciar';
 
-      // barra de progresso geral
+      // setas de pular: limites do começo/fim
+      document.getElementById('btnPularAnt').disabled = concluida || indiceIntervaloAtual === 0;
+      document.getElementById('btnPularProx').disabled = concluida || indiceIntervaloAtual === intervalosSessao.length - 1;
+
+      // tempo total e barra
       const decorrido = segundosDecorridos();
       const pct = Math.min((decorrido / totalSegundosSessao) * 100, 100);
       document.getElementById('barraPreenchida').style.width = pct + '%';
 
-      // tempo total da sessao (decorrido / total e quanto falta)
+      // ANEL colorido = progresso da SESSÃO INTEIRA
+      const fracao = concluida ? 1 : Math.max(0, Math.min(decorrido / totalSegundosSessao, 1));
+      const ring = document.getElementById('ringProg');
+      ring.style.strokeDasharray = CIRCUNFERENCIA;
+      ring.style.strokeDashoffset = CIRCUNFERENCIA * (1 - fracao);
+
       const restanteTotal = Math.max(totalSegundosSessao - decorrido, 0);
       document.getElementById('tempoTotalDecorrido').textContent =
         formatarRelogio(decorrido) + ' / ' + formatarRelogio(totalSegundosSessao);
@@ -654,20 +684,15 @@
 
     function segundosDecorridos() {
       let decorrido = 0;
-      for (let i = 0; i < indiceIntervaloAtual; i++) {
-        decorrido += intervalosSessao[i].segundos;
-      }
+      for (let i = 0; i < indiceIntervaloAtual; i++) { decorrido += intervalosSessao[i].segundos; }
       decorrido += (intervalosSessao[indiceIntervaloAtual].segundos - segundosRestantes);
       return decorrido;
     }
 
     function destacarBlocoAtual() {
       elementosLista.forEach(function (li, indice) {
-        if (indice === indiceIntervaloAtual && !concluida) {
-          li.classList.add('ativo');
-        } else {
-          li.classList.remove('ativo');
-        }
+        if (indice === indiceIntervaloAtual && !concluida) { li.classList.add('ativo'); }
+        else { li.classList.remove('ativo'); }
       });
     }
 
@@ -678,13 +703,11 @@
 
     document.getElementById('btnIniciar').addEventListener('click', alternarPlay);
     document.getElementById('btnReiniciar').addEventListener('click', prepararSessao);
+    document.getElementById('btnPularAnt').addEventListener('click', function () { pularBloco(-1); });
+    document.getElementById('btnPularProx').addEventListener('click', function () { pularBloco(1); });
 
-    document.getElementById('btnAnterior').addEventListener('click', function () {
-      irParaSessao(posicaoAtual - 1);
-    });
-    document.getElementById('btnProxima').addEventListener('click', function () {
-      irParaSessao(posicaoAtual + 1);
-    });
+    document.getElementById('btnAnterior').addEventListener('click', function () { irParaSessao(posicaoAtual - 1); });
+    document.getElementById('btnProxima').addEventListener('click', function () { irParaSessao(posicaoAtual + 1); });
 
     document.getElementById('btnZerar').addEventListener('click', function () {
       if (rodando) return;
@@ -696,7 +719,6 @@
       prepararSessao();
     });
 
-    // arranque: lê o progresso salvo e abre na próxima sessão pendente
     sessoesConcluidas = carregarProgresso();
     aplicarPosicao(sessoesConcluidas);
     prepararSessao();
