@@ -8,25 +8,21 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Treino">
   <style>
-    /* ================================================================
-       PAINEL DE CONTROLE DO VISUAL (design tokens)
-       ================================================================ */
     :root {
       --surface: #ffffff;
       --ink: #1b1f1d;
       --ink-soft: #8a9296;
       --line: #e8edee;
 
-      --accent: #2fbf4f;        /* verde Bevel */
+      --accent: #2fbf4f;
 
       --run-bg: #e7f7ea;   --run-ink: #1ea33f;
       --walk-bg: #e7f1fc;  --walk-ink: #2f86d6;
       --done-bg: #e7f7ea;  --done-ink: #1ea33f;
 
-      /* tons de cinza do trilho segmentado, por fase */
-      --seg-aquece: #dfe5e7;    /* aquecimento / desaquecimento: mais claro */
-      --seg-caminha: #c4ccce;   /* caminhada: médio */
-      --seg-corre: #9aa4a6;     /* corrida: mais escuro */
+      --seg-aquece: #dfe5e7;
+      --seg-caminha: #c4ccce;
+      --seg-corre: #9aa4a6;
 
       --radius-lg: 30px;
       --radius-md: 18px;
@@ -36,7 +32,7 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html, body { overscroll-behavior: none; }  /* desliga o "puxar para atualizar" */
+    html, body { overscroll-behavior: none; }
 
     body {
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -68,43 +64,30 @@
 
     .rotulo {
       color: var(--ink-soft);
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.2px;
+      font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.2px;
     }
 
     .destaque { font-size: 20px; font-weight: 700; margin-top: 6px; letter-spacing: -0.3px; }
 
-    /* Cartão do cronômetro com anel */
     .acaoCartao { text-align: center; padding: 24px 22px; }
-
-    .cronoLinha {
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-    }
+    .cronoLinha { display: flex; align-items: center; justify-content: center; gap: 6px; }
     .ringWrap { position: relative; width: 240px; height: 240px; flex: 0 0 auto; }
     .ring { width: 100%; height: 100%; transform: rotate(-90deg); }
     .ringSeg { fill: none; stroke-width: 14; }
     .ringProg {
-      fill: none; stroke-width: 14; stroke-linecap: round;
-      stroke: var(--walk-ink);
+      fill: none; stroke-width: 14; stroke-linecap: round; stroke: var(--walk-ink);
       transition: stroke-dashoffset .25s linear, stroke .3s ease;
     }
     .ringCenter {
       position: absolute; inset: 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
     }
-    .acaoTexto {
-      font-size: 16px; font-weight: 800;
-      letter-spacing: 0.3px; color: var(--walk-ink);
-    }
+    .acaoTexto { font-size: 16px; font-weight: 800; letter-spacing: 0.3px; color: var(--walk-ink); }
     .tempoRestante {
-      font-size: 50px; font-weight: 800;
-      font-variant-numeric: tabular-nums;
+      font-size: 50px; font-weight: 800; font-variant-numeric: tabular-nums;
       letter-spacing: -1.5px; margin-top: 2px; color: var(--ink);
     }
-
     .acaoCartao.corrida .acaoTexto { color: var(--run-ink); }
     .acaoCartao.corrida .ringProg { stroke: var(--run-ink); }
     .acaoCartao.caminhada .acaoTexto { color: var(--walk-ink); }
@@ -112,7 +95,6 @@
     .acaoCartao.concluida .acaoTexto { color: var(--done-ink); }
     .acaoCartao.concluida .ringProg { stroke: var(--done-ink); }
 
-    /* setas de pular bloco */
     .pular {
       flex: 0 0 auto; width: 38px; height: 38px; border-radius: 999px;
       background: #f1f5f6; color: var(--ink); border: none;
@@ -122,7 +104,6 @@
 
     #avisoTela { font-size: 12px; color: var(--ink-soft); margin-top: 14px; min-height: 16px; }
 
-    /* Barra de progresso geral */
     .barra { background: #ecf0f1; border-radius: 999px; height: 8px; overflow: hidden; margin-top: 12px; }
     .barraPreenchida { background: var(--accent); height: 100%; width: 0%; border-radius: 999px; transition: width 0.25s linear; }
 
@@ -141,6 +122,7 @@
     button:active { transform: scale(0.98); }
     #btnIniciar { background: var(--ink); color: #fff; }
     #btnReiniciar { background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); }
+    #btnConcluir { background: var(--accent); color: #fff; display: none; }
 
     .navSessao { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; gap: 10px; }
     .navSessao #planoProgresso { flex: 1; text-align: center; font-size: 13px; color: var(--ink-soft); }
@@ -217,6 +199,10 @@
     <button id="btnReiniciar">Reiniciar</button>
   </div>
 
+  <div class="botoes">
+    <button id="btnConcluir">Concluir sessão</button>
+  </div>
+
   <div class="cartao">
     <div class="rotulo">Estrutura da sessão</div>
     <ul id="listaIntervalos"></ul>
@@ -253,11 +239,9 @@
 
     // ====================================================================
     // 2. FÁBRICA DE INTERVALOS
-    // Cada bloco agora carrega: tipo, fase, segundos, rep, repTotal, descricao
     // ====================================================================
     function gerarIntervalos(semana) {
       const intervalos = [];
-      // quantas caminhadas de descanso existem (entre as corridas)
       const totalCaminhadas = (semana.walkBetweenSeconds > 0) ? (semana.runReps - 1) : 0;
 
       intervalos.push({
@@ -272,7 +256,6 @@
           rep: i + 1, repTotal: semana.runReps,
           descricao: semana.runReps > 1 ? ('Corra ' + (i + 1) + '/' + semana.runReps) : 'Corra'
         });
-
         const ehUltimaCorrida = (i === semana.runReps - 1);
         if (!ehUltimaCorrida && semana.walkBetweenSeconds > 0) {
           caminhadaN++;
@@ -300,7 +283,6 @@
       if (resto === 0) return minutos + ' min';
       return minutos + ' min ' + resto + 's';
     }
-
     function formatarRelogio(segundos) {
       const m = Math.floor(segundos / 60);
       const s = segundos % 60;
@@ -311,7 +293,6 @@
     // 3.5 SOM E VIBRAÇÃO
     // ====================================================================
     let audioCtx = null;
-
     function destravarAudio() {
       if (audioCtx === null) {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -319,7 +300,6 @@
       }
       if (audioCtx.state === 'suspended') { audioCtx.resume(); }
     }
-
     function tocarSequencia(notas) {
       if (audioCtx === null) return;
       let inicio = audioCtx.currentTime;
@@ -340,9 +320,7 @@
         inicio += dur + (nota.gap || 0) / 1000;
       });
     }
-
     function vibrar(padrao) { if (navigator.vibrate) { navigator.vibrate(padrao); } }
-
     function alertarCorrida() {
       tocarSequencia([{ freq: 660, dur: 150, gap: 40 }, { freq: 880, dur: 280 }]);
       vibrar([200, 100, 200]);
@@ -373,6 +351,7 @@
     let totalSegundosSessao = 0;
     let elementosLista = [];
     let ultimoSegundoBip = null;
+    let jaIniciou = false;   // controla a exibição do botão Concluir
 
     const TOTAL_SESSOES = SEMANAS.length * SESSOES_POR_SEMANA;
     const CHAVE_PROGRESSO = 'treinoCorrida.progresso';
@@ -397,26 +376,20 @@
         return 0;
       } catch (e) { return 0; }
     }
-
     function salvarProgresso(n) {
-      try {
-        localStorage.setItem(CHAVE_PROGRESSO, JSON.stringify({ concluidas: n, versao: 1 }));
-      } catch (e) {}
+      try { localStorage.setItem(CHAVE_PROGRESSO, JSON.stringify({ concluidas: n, versao: 1 })); } catch (e) {}
     }
-
     function aplicarPosicao(posicao) {
       posicaoAtual = Math.max(0, Math.min(posicao, TOTAL_SESSOES - 1));
       indiceSemanaAtual = Math.floor(posicaoAtual / SESSOES_POR_SEMANA);
       numeroSessaoAtual = (posicaoAtual % SESSOES_POR_SEMANA) + 1;
     }
-
     function atualizarNavegacao() {
       document.getElementById('planoProgresso').textContent =
         sessoesConcluidas + ' de ' + TOTAL_SESSOES + ' concluídas';
       document.getElementById('btnAnterior').disabled = rodando || posicaoAtual === 0;
       document.getElementById('btnProxima').disabled  = rodando || posicaoAtual === TOTAL_SESSOES - 1;
     }
-
     function irParaSessao(novaPosicao) {
       if (rodando) return;
       aplicarPosicao(novaPosicao);
@@ -450,7 +423,7 @@
     }
 
     // ====================================================================
-    // 4.7 WAKE LOCK
+    // 4.7 WAKE LOCK + RECONCILIAÇÃO AO VOLTAR O FOCO
     // ====================================================================
     let wakeLock = null;
     async function pegarWakeLock() {
@@ -476,11 +449,14 @@
       document.getElementById('avisoTela').textContent = '';
     }
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible' && rodando) { pegarWakeLock(); }
+      if (document.visibilityState === 'visible' && rodando) {
+        pegarWakeLock();
+        tick();   // reconcilia com o relógio real caso a contagem tenha congelado
+      }
     });
 
     // ====================================================================
-    // 5. PREPARAR A SESSÃO (monta o trilho segmentado uma vez)
+    // 5. PREPARAR A SESSÃO
     // ====================================================================
     function prepararSessao() {
       const semana = SEMANAS[indiceSemanaAtual];
@@ -489,6 +465,7 @@
       segundosRestantes = intervalosSessao[0].segundos;
       rodando = false;
       concluida = false;
+      jaIniciou = false;
       ultimoSegundoBip = null;
       if (timerId !== null) { clearInterval(timerId); timerId = null; }
 
@@ -502,34 +479,26 @@
       atualizarTela();
     }
 
-    // Desenha um arquinho cinza por bloco, com uma cor de cinza por fase.
     function corDaFase(fase) {
       if (fase === 'corrida') return getComputedStyle(document.documentElement).getPropertyValue('--seg-corre');
       if (fase === 'caminhada') return getComputedStyle(document.documentElement).getPropertyValue('--seg-caminha');
       return getComputedStyle(document.documentElement).getPropertyValue('--seg-aquece');
     }
-
     function desenharTrilhoSegmentado() {
       const g = document.getElementById('ringSegmentos');
       g.innerHTML = '';
-      const folga = 4;  // pequeno espaço (em unidades de comprimento) entre os arcos
-      let posicao = 0;  // comprimento acumulado ao longo do círculo
-
+      const folga = 4;
+      let posicao = 0;
       intervalosSessao.forEach(function (bloco) {
         const comprimento = (bloco.segundos / totalSegundosSessao) * CIRCUNFERENCIA;
         const visivel = Math.max(comprimento - folga, 1);
-
         const arco = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         arco.setAttribute('class', 'ringSeg');
-        arco.setAttribute('cx', '120');
-        arco.setAttribute('cy', '120');
-        arco.setAttribute('r', String(RAIO));
+        arco.setAttribute('cx', '120'); arco.setAttribute('cy', '120'); arco.setAttribute('r', String(RAIO));
         arco.setAttribute('stroke', corDaFase(bloco.fase).trim());
-        // dasharray: "trecho visível" seguido de "resto invisível"
         arco.setAttribute('stroke-dasharray', visivel + ' ' + (CIRCUNFERENCIA - visivel));
         arco.setAttribute('stroke-dashoffset', String(-posicao));
         g.appendChild(arco);
-
         posicao += comprimento;
       });
     }
@@ -544,6 +513,7 @@
     }
     function iniciar() {
       rodando = true;
+      jaIniciou = true;
       fimDoIntervalo = Date.now() + segundosRestantes * 1000;
       timerId = setInterval(tick, 250);
       pegarWakeLock();
@@ -557,12 +527,18 @@
     }
 
     // ====================================================================
-    // 7. O TICK
+    // 7. O TICK (while consome todos os blocos vencidos de uma vez)
     // ====================================================================
     function tick() {
+      if (!rodando) return;
+      // enquanto o tempo do bloco atual já venceu, avança para o próximo
+      while (rodando && (fimDoIntervalo - Date.now()) <= 0) {
+        avancarIntervalo(true);
+        if (concluida) return;   // finalizou no avanço
+      }
+      if (!rodando) return;
       const restanteMs = fimDoIntervalo - Date.now();
       segundosRestantes = Math.max(Math.ceil(restanteMs / 1000), 0);
-      if (restanteMs <= 0) { avancarIntervalo(true); return; }
       if (segundosRestantes <= 3 && segundosRestantes !== ultimoSegundoBip) {
         ultimoSegundoBip = segundosRestantes;
         bipContagem();
@@ -572,7 +548,6 @@
 
     // ====================================================================
     // 8. AVANÇAR / PULAR BLOCO
-    // comAlerta = true toca o som (virada natural). Pulo manual também alerta.
     // ====================================================================
     function avancarIntervalo(comAlerta) {
       indiceIntervaloAtual++;
@@ -582,7 +557,6 @@
       }
       entrarNoBloco(comAlerta);
     }
-
     function entrarNoBloco(comAlerta) {
       segundosRestantes = intervalosSessao[indiceIntervaloAtual].segundos;
       fimDoIntervalo = Date.now() + segundosRestantes * 1000;
@@ -593,8 +567,6 @@
       }
       atualizarTela();
     }
-
-    // pulo manual pelas setas, funciona rodando ou pausado
     function pularBloco(direcao) {
       if (concluida) return;
       const novo = indiceIntervaloAtual + direcao;
@@ -607,16 +579,20 @@
       pausar();
       concluida = true;
       indiceIntervaloAtual = intervalosSessao.length - 1;
-
-      // NOVA REGRA: concluir marca como feitas todas até esta sessão.
-      // Avança para frente, nunca retrocede ao repetir uma antiga.
       if (posicaoAtual + 1 > sessoesConcluidas) {
         sessoesConcluidas = posicaoAtual + 1;
         salvarProgresso(sessoesConcluidas);
       }
-
       alertarFim();
       atualizarTela();
+    }
+
+    // encerrar manualmente pelo botão Concluir
+    function concluirManual() {
+      if (concluida) return;
+      const ok = confirm('Encerrar a sessão agora e marcá-la como concluída?');
+      if (!ok) return;
+      finalizarSessao();
     }
 
     // ====================================================================
@@ -657,16 +633,17 @@
         'Bloco ' + (indiceIntervaloAtual + 1) + ' de ' + intervalosSessao.length;
       document.getElementById('btnIniciar').textContent = rodando ? 'Pausar' : 'Iniciar';
 
-      // setas de pular: limites do começo/fim
+      // botão Concluir aparece quando a sessão já começou e não terminou
+      document.getElementById('btnConcluir').style.display =
+        (jaIniciou && !concluida) ? 'block' : 'none';
+
       document.getElementById('btnPularAnt').disabled = concluida || indiceIntervaloAtual === 0;
       document.getElementById('btnPularProx').disabled = concluida || indiceIntervaloAtual === intervalosSessao.length - 1;
 
-      // tempo total e barra
       const decorrido = segundosDecorridos();
       const pct = Math.min((decorrido / totalSegundosSessao) * 100, 100);
       document.getElementById('barraPreenchida').style.width = pct + '%';
 
-      // ANEL colorido = progresso da SESSÃO INTEIRA
       const fracao = concluida ? 1 : Math.max(0, Math.min(decorrido / totalSegundosSessao, 1));
       const ring = document.getElementById('ringProg');
       ring.style.strokeDasharray = CIRCUNFERENCIA;
@@ -688,7 +665,6 @@
       decorrido += (intervalosSessao[indiceIntervaloAtual].segundos - segundosRestantes);
       return decorrido;
     }
-
     function destacarBlocoAtual() {
       elementosLista.forEach(function (li, indice) {
         if (indice === indiceIntervaloAtual && !concluida) { li.classList.add('ativo'); }
@@ -703,9 +679,9 @@
 
     document.getElementById('btnIniciar').addEventListener('click', alternarPlay);
     document.getElementById('btnReiniciar').addEventListener('click', prepararSessao);
+    document.getElementById('btnConcluir').addEventListener('click', concluirManual);
     document.getElementById('btnPularAnt').addEventListener('click', function () { pularBloco(-1); });
     document.getElementById('btnPularProx').addEventListener('click', function () { pularBloco(1); });
-
     document.getElementById('btnAnterior').addEventListener('click', function () { irParaSessao(posicaoAtual - 1); });
     document.getElementById('btnProxima').addEventListener('click', function () { irParaSessao(posicaoAtual + 1); });
 
