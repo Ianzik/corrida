@@ -25,9 +25,9 @@ jobs:
     env:
       VERSAO_CODIGO: ${{ github.run_number }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -38,12 +38,13 @@ jobs:
       - name: Testes da lógica
         run: npm test
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
+      # O Android SDK já vem instalado no servidor do GitHub (ANDROID_HOME);
+      # o Gradle baixa sozinho a versão da plataforma que faltar.
 
       - name: Copiar o site para o app
         run: npm run android
