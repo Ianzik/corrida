@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "Treino de Corrida",
+  "short_name": "Treino",
+  "description": "Do zero aos 30 minutos contínuos",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef4f3",
+  "theme_color": "#cce5fb",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icons/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
