@@ -53,30 +53,32 @@ jobs:
         id: chave
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_SENHA: ${{ secrets.KEYSTORE_SENHA }}
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_SENHA" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/treino.jks"
-            echo "arquivo=$RUNNER_TEMP/treino.jks" >> "$GITHUB_OUTPUT"
-            echo "tem=sim" >> "$GITHUB_OUTPUT"
+            echo "oficial=sim" >> "$GITHUB_OUTPUT"
           else
-            echo "tem=nao" >> "$GITHUB_OUTPUT"
-            echo "::warning::Segredo KEYSTORE_BASE64 não cadastrado: o APK sai sem assinatura oficial e não é publicado."
+            # Sem os segredos: chave descartável, só para conferir que o
+            # APK final compila. Esse APK NÃO serve para instalar e atualizar.
+            SENHA=$(openssl rand -hex 16)
+            keytool -genkeypair -storetype PKCS12 -keystore "$RUNNER_TEMP/treino.jks" -alias treino \
+              -keyalg RSA -keysize 2048 -validity 1 -storepass "$SENHA" -keypass "$SENHA" -dname "CN=teste"
+            echo "::add-mask::$SENHA"
+            echo "senha=$SENHA" >> "$GITHUB_OUTPUT"
+            echo "oficial=nao" >> "$GITHUB_OUTPUT"
+            echo "::warning::Segredos KEYSTORE_BASE64/KEYSTORE_SENHA não cadastrados: APK de conferência, não é publicado."
           fi
 
       - name: Compilar APK
         working-directory: android
         env:
-          KEYSTORE_ARQUIVO: ${{ steps.chave.outputs.arquivo }}
-          KEYSTORE_SENHA: ${{ secrets.KEYSTORE_SENHA }}
+          KEYSTORE_ARQUIVO: ${{ runner.temp }}/treino.jks
+          KEYSTORE_SENHA: ${{ secrets.KEYSTORE_SENHA || steps.chave.outputs.senha }}
         run: |
           chmod +x gradlew
-          if [ "${{ steps.chave.outputs.tem }}" = "sim" ]; then
-            ./gradlew --no-daemon assembleRelease
-            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/treino-corrida.apk"
-          else
-            ./gradlew --no-daemon assembleDebug
-            cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/treino-corrida.apk"
-          fi
+          ./gradlew --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/treino-corrida.apk"
 
       - name: Guardar o APK nesta execução
         uses: actions/upload-artifact@v4
@@ -85,7 +87,7 @@ jobs:
           path: treino-corrida.apk
 
       - name: Publicar Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.chave.outputs.tem == 'sim'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.chave.outputs.oficial == 'sim'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
