@@ -88,8 +88,25 @@
   </div>
 
   <p class="rodape">
+    <button id="btnExportar" class="linkBtn">Exportar progresso</button>
+    <button id="btnImportar" class="linkBtn">Importar progresso</button>
     <button id="btnZerar" class="linkBtn">Zerar progresso</button>
   </p>
+
+  <div class="dialogoFundo" id="dialogo" hidden>
+    <div class="dialogoCaixa" role="dialog" aria-modal="true" aria-labelledby="dialogoTitulo">
+      <h2 id="dialogoTitulo"></h2>
+      <p id="dialogoTexto"></p>
+      <ol id="dialogoPassos" hidden></ol>
+      <textarea id="dialogoCampo" rows="5" hidden></textarea>
+      <label id="dialogoArquivoRotulo" class="dialogoArquivo" hidden>
+        Escolher arquivo
+        <input type="file" id="dialogoArquivo" accept=".json,.txt,application/json,text/plain">
+      </label>
+      <p id="dialogoAviso" class="dialogoAviso" aria-live="polite"></p>
+      <div id="dialogoBotoes" class="dialogoBotoes"></div>
+    </div>
+  </div>
 
   <div class="trava" id="trava" hidden>
     <div class="travaCaixa">

@@ -1,0 +1,95 @@
+# Gera o APK do app Android.
+#  - Push na main: gera o APK ASSINADO e publica como Release (baixa pelo celular).
+#  - Push na fase-2, pull requests ou execução manual: só compila, para conferir.
+# A chave de assinatura vem dos segredos do repositório (Settings > Secrets):
+#   KEYSTORE_BASE64  e  KEYSTORE_SENHA
+
+name: App Android
+
+on:
+  push:
+    branches: [main, fase-2]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      VERSAO_CODIGO: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Testes da lógica
+        run: npm test
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Copiar o site para o app
+        run: npm run android
+
+      - name: Montar a chave de assinatura
+        id: chave
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/treino.jks"
+            echo "arquivo=$RUNNER_TEMP/treino.jks" >> "$GITHUB_OUTPUT"
+            echo "tem=sim" >> "$GITHUB_OUTPUT"
+          else
+            echo "tem=nao" >> "$GITHUB_OUTPUT"
+            echo "::warning::Segredo KEYSTORE_BASE64 não cadastrado: o APK sai sem assinatura oficial e não é publicado."
+          fi
+
+      - name: Compilar APK
+        working-directory: android
+        env:
+          KEYSTORE_ARQUIVO: ${{ steps.chave.outputs.arquivo }}
+          KEYSTORE_SENHA: ${{ secrets.KEYSTORE_SENHA }}
+        run: |
+          chmod +x gradlew
+          if [ "${{ steps.chave.outputs.tem }}" = "sim" ]; then
+            ./gradlew --no-daemon assembleRelease
+            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/treino-corrida.apk"
+          else
+            ./gradlew --no-daemon assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/treino-corrida.apk"
+          fi
+
+      - name: Guardar o APK nesta execução
+        uses: actions/upload-artifact@v4
+        with:
+          name: treino-corrida-apk
+          path: treino-corrida.apk
+
+      - name: Publicar Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.chave.outputs.tem == 'sim'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSAO="v2.0.${{ github.run_number }}"
+          gh release create "$VERSAO" treino-corrida.apk \
+            --title "Treino de Corrida $VERSAO" \
+            --notes "APK do app Android. No celular: baixe o arquivo treino-corrida.apk abaixo e toque nele para instalar (ou atualizar por cima). Commit: ${{ github.sha }}" \
+            --latest

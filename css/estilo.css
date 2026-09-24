@@ -185,3 +185,39 @@ li.hist {
 .travaBarra { background: #ecf0f1; border-radius: 999px; height: 6px; overflow: hidden; margin-top: 14px; }
 .travaBarraFill { background: var(--accent); height: 100%; width: 0%; }
 .trava.segurando .travaBarraFill { width: 100%; transition: width 2s linear; }
+
+/* ---------- adições da fase 2 ---------- */
+.rodape { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; }
+.rodape .linkBtn { flex: none; }
+
+.dialogoFundo {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(27, 31, 29, 0.45);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+.dialogoCaixa {
+  width: 100%; max-width: 440px; background: var(--surface);
+  border-radius: var(--radius-lg); padding: 22px; box-shadow: var(--shadow);
+  max-height: 100%; overflow-y: auto;
+}
+.dialogoCaixa h2 { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
+#dialogoTexto { margin-top: 10px; font-size: 15px; line-height: 1.45; white-space: pre-line; }
+#dialogoPassos { margin: 12px 0 0 20px; font-size: 15px; line-height: 1.45; }
+#dialogoPassos li { display: list-item; padding: 3px 0; margin: 0; border-radius: 0; font-weight: 500; }
+#dialogoCampo {
+  width: 100%; margin-top: 12px; padding: 12px; font-size: 13px;
+  font-family: ui-monospace, monospace; border: 1.5px solid var(--line);
+  border-radius: var(--radius-md); resize: vertical; color: var(--ink); background: #f7f9f9;
+}
+.dialogoArquivo {
+  display: inline-block; margin-top: 10px; padding: 9px 14px; font-size: 14px; font-weight: 700;
+  background: #f1f5f6; border-radius: 999px; cursor: pointer;
+}
+.dialogoArquivo input { display: none; }
+.dialogoAviso { margin-top: 10px; min-height: 18px; font-size: 14px; font-weight: 700; color: var(--walk-ink); }
+.dialogoBotoes { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.dialogoBotoes button { flex: none; padding: 15px; }
+.dialogoPrincipal { background: var(--ink); color: #fff; }
+.dialogoSecundario { background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); }

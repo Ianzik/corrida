@@ -1,0 +1,8 @@
+{
+  "appId": "br.com.ianzik.treinocorrida",
+  "appName": "Treino de Corrida",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}

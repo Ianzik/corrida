@@ -13,6 +13,9 @@ import {
   carregarSessaoAtiva, salvarSessaoAtiva, limparSessaoAtiva,
 } from './armazenamento.js';
 import * as alertas from './alertas.js';
+import { gerarExportacao, lerImportacao, juntarProgressos, aplicarConclusoes } from './transferencia.js';
+import { mostrarDialogo } from './dialogo.js';
+import { ehAppNativo, chamar } from './nativo.js';
 
 const $ = id => document.getElementById(id);
 const RAIO = 110;
@@ -30,20 +33,33 @@ let rodando = false;
 let concluida = false;
 let jaIniciou = false;
 let iniciadaEm = null;
+let atualizadaEm = 0;
 let timerId = null;
 let ultimoSegundoBip = null;
 let desfazer = null; // { posicao, anterior } da última conclusão automática
 
 // ---------------- persistência ----------------
 function persistir() {
+  atualizadaEm = Date.now();
   if (jaIniciou && !concluida) {
     salvarSessaoAtiva({
       posicao: posicaoAtual, indice, rodando, fimDoIntervalo,
-      segundosRestantes, iniciadaEm, atualizadaEm: Date.now(),
+      segundosRestantes, iniciadaEm, atualizadaEm,
     });
   } else {
     limparSessaoAtiva();
   }
+  sincronizarAlertas();
+}
+
+// Conta aos alertas como está o treino (no app Android, isso agenda
+// os avisos no serviço nativo; no navegador não faz nada).
+function sincronizarAlertas() {
+  alertas.sincronizar({
+    ativa: jaIniciou && !concluida,
+    posicao: posicaoAtual, intervalos, indice, rodando,
+    fimDoIntervalo, segundosRestantes, iniciadaEm, atualizadaEm,
+  });
 }
 
 // ---------------- timer ----------------
@@ -72,7 +88,7 @@ function tick() {
     // Mesmo que vários blocos tenham passado (app congelado),
     // toca só UM aviso: o do bloco em que você está agora.
     ultimoSegundoBip = null;
-    alertas.alertarBloco(intervalos[indice].tipo);
+    alertas.alertarBloco(intervalos, indice);
     persistir();
   } else if (segundosRestantes <= 3 && segundosRestantes > 0 && segundosRestantes !== ultimoSegundoBip) {
     ultimoSegundoBip = segundosRestantes;
@@ -98,6 +114,7 @@ function prepararSessao(posicao) {
   iniciadaEm = null;
   ultimoSegundoBip = null;
   limparSessaoAtiva();
+  sincronizarAlertas();
   desenharTrilho();
   renderizarLista();
   atualizarTela();
@@ -112,7 +129,12 @@ function botaoPrincipal() {
   if (rodando) pausar(); else iniciar();
 }
 
-function iniciar() {
+let preparandoInicio = false;
+async function iniciar() {
+  if (preparandoInicio) return;
+  preparandoInicio = true;
+  try { await alertas.prepararInicio(); } finally { preparandoInicio = false; }
+  if (rodando || concluida) return;
   rodando = true;
   jaIniciou = true;
   if (iniciadaEm === null) iniciadaEm = Date.now();
@@ -143,7 +165,7 @@ function pularBloco(direcao) {
   segundosRestantes = intervalos[indice].segundos;
   fimDoIntervalo = Date.now() + segundosRestantes * 1000;
   ultimoSegundoBip = null;
-  alertas.alertarBloco(intervalos[indice].tipo);
+  alertas.alertarBloco(intervalos, indice);
   persistir();
   atualizarTela();
 }
@@ -160,6 +182,7 @@ function concluirSessao(tipo, quando, silencioso) {
   progresso = novo;
   salvarProgresso(progresso);
   limparSessaoAtiva();
+  sincronizarAlertas();
   if (!silencioso) alertas.alertarFim();
   atualizarTela();
   return anterior;
@@ -215,6 +238,10 @@ function desfazerConclusaoAutomatica() {
 // ---------------- wake lock ----------------
 let wakeLock = null;
 async function pegarWakeLock() {
+  if (!alertas.precisaTelaAcesa()) {
+    $('avisoTela').textContent = 'Pode apagar a tela: os avisos continuam';
+    return;
+  }
   if (!('wakeLock' in navigator)) {
     $('avisoTela').textContent = 'Mantenha a tela acesa manualmente';
     return;
@@ -378,16 +405,83 @@ function atualizarTela() {
   $('planoProgresso').textContent = progresso.concluidas + ' de ' + TOTAL_SESSOES + ' concluídas';
   $('btnAnterior').disabled = rodando || posicaoAtual === 0;
   $('btnProxima').disabled = rodando || posicaoAtual === TOTAL_SESSOES - 1;
+  $('btnImportar').disabled = rodando;
+  $('btnZerar').disabled = rodando;
 
   $('avisoSom').hidden = !(rodando && !alertas.audioLiberado());
   renderizarHistorico();
 }
 
-// ---------------- ao abrir o app ----------------
-function arrancar() {
-  salvarProgresso(progresso); // grava já no formato novo (migração)
-  const ativa = carregarSessaoAtiva();
+// ---------------- mudanças feitas fora do app (serviço Android) ----------------
+// Grava no progresso as sessões que o serviço concluiu. Devolve a
+// última aplicada (para o banner "concluída às..."), ou null.
+function absorverConclusoes(ext) {
+  if (!ext || !ext.conclusoes || ext.conclusoes.length === 0) return null;
+  const r = aplicarConclusoes(progresso, ext.conclusoes);
+  alertas.confirmarConclusoes();
+  if (r.aplicadas.length === 0) return null;
+  progresso = r.progresso;
+  salvarProgresso(progresso);
+  return r.aplicadas[r.aplicadas.length - 1];
+}
 
+// Com o app aberto: você tocou em Pausar/Continuar/Encerrar na
+// notificação, ou o serviço terminou a sessão.
+function aplicarMudancaExterna(ext) {
+  const feita = absorverConclusoes(ext);
+  if (feita) {
+    if (jaIniciou && !concluida && feita.posicao === posicaoAtual) {
+      desligarTimer();
+      soltarWakeLock();
+      destravarToques();
+      rodando = false;
+      concluida = true;
+      indice = intervalos.length - 1;
+      segundosRestantes = 0;
+      limparSessaoAtiva();
+    }
+    mostrarBanner(feita.posicao, feita.em, feita.anterior);
+    atualizarTela();
+    return;
+  }
+  const s = ext.sessao;
+  if (!s || s.posicao !== posicaoAtual || !jaIniciou || concluida) return;
+  if ((s.atualizadaEm || 0) <= atualizadaEm) return;
+  if (s.indice < 0 || s.indice >= intervalos.length) return;
+  indice = s.indice;
+  rodando = !!s.rodando;
+  fimDoIntervalo = s.fimDoIntervalo || 0;
+  segundosRestantes = s.segundosRestantes;
+  atualizadaEm = s.atualizadaEm;
+  ultimoSegundoBip = null;
+  if (rodando) { ligarTimer(); pegarWakeLock(); } else { desligarTimer(); soltarWakeLock(); }
+  salvarSessaoAtiva({
+    posicao: posicaoAtual, indice, rodando, fimDoIntervalo,
+    segundosRestantes, iniciadaEm, atualizadaEm,
+  });
+  atualizarTela();
+}
+
+// ---------------- ao abrir o app ----------------
+async function arrancar() {
+  salvarProgresso(progresso); // grava já no formato novo (migração)
+  let ativa = carregarSessaoAtiva();
+
+  // No app Android: o que o serviço fez enquanto o app estava fechado.
+  const ext = await alertas.lerEstadoExterno();
+  const feitaFora = absorverConclusoes(ext);
+  if (feitaFora && ativa && feitaFora.posicao === ativa.posicao) {
+    ativa = null; // esta sessão já terminou no serviço (conclusões pendentes são sempre novas)
+  }
+  if (ext && ext.sessao && (!ativa || (ext.sessao.atualizadaEm || 0) > (ativa.atualizadaEm || 0))) {
+    ativa = ext.sessao; // ex.: você pausou pela notificação
+  }
+
+  restaurar(ativa);
+  if (feitaFora) mostrarBanner(feitaFora.posicao, feitaFora.em, feitaFora.anterior);
+}
+
+function restaurar(ativa) {
   if (!ativa || ativa.posicao < 0 || ativa.posicao >= TOTAL_SESSOES) {
     prepararSessao(Math.min(progresso.concluidas, TOTAL_SESSOES - 1));
     return;
@@ -426,6 +520,99 @@ function arrancar() {
   atualizarTela();
 }
 
+// ---------------- exportar / importar progresso ----------------
+async function copiarTexto(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+    return 'Copiado! Agora cole no outro aparelho.';
+  } catch (e) {
+    const campo = $('dialogoCampo');
+    campo.focus();
+    campo.select();
+    try { if (document.execCommand('copy')) return 'Copiado! Agora cole no outro aparelho.'; } catch (e2) {}
+    return 'Não consegui copiar sozinho: o texto está selecionado, use "Copiar" do teclado.';
+  }
+}
+
+function baixarArquivo(texto) {
+  const blob = new Blob([texto], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'progresso-treino-corrida.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return 'Arquivo salvo em Downloads.';
+}
+
+function resumoProgresso(p) {
+  const proxima = Math.min(p.concluidas, TOTAL_SESSOES - 1);
+  return p.concluidas + ' de ' + TOTAL_SESSOES + ' concluídas (próxima: ' + nomeDaSessao(proxima) + ')';
+}
+
+async function exportar() {
+  const texto = gerarExportacao(progresso, Date.now());
+  const botoes = [{ id: 'copiar', texto: 'Copiar texto', principal: true, fica: true, acao: () => copiarTexto(texto) }];
+  if (ehAppNativo()) {
+    botoes.push({
+      id: 'enviar', texto: 'Enviar ou salvar arquivo', fica: true,
+      acao: () => chamar('compartilhar', { texto }).then(() => undefined, () => 'Não consegui abrir o compartilhamento.'),
+    });
+  } else {
+    botoes.push({ id: 'baixar', texto: 'Baixar arquivo', fica: true, acao: () => baixarArquivo(texto) });
+  }
+  botoes.push({ id: 'fechar', texto: 'Fechar' });
+  await mostrarDialogo({
+    titulo: 'Exportar progresso',
+    texto: 'Aqui: ' + resumoProgresso(progresso) + '. Copie o texto (ou salve o arquivo) e, no outro aparelho, use "Importar progresso".',
+    campo: { valor: texto, somenteLeitura: true },
+    botoes,
+  });
+}
+
+async function importar() {
+  if (rodando) return;
+  let importado = null;
+  const r = await mostrarDialogo({
+    titulo: 'Importar progresso',
+    texto: 'Cole o texto exportado do outro aparelho ou escolha o arquivo. Os dois progressos são juntados: fica o maior avanço e nada é apagado.',
+    campo: { dica: 'Cole aqui o texto exportado' },
+    arquivo: true,
+    botoes: [
+      {
+        id: 'importar', texto: 'Continuar', principal: true,
+        acao: texto => {
+          const lido = lerImportacao(texto);
+          if (!lido.ok) return lido.erro;
+          importado = lido.progresso;
+        },
+      },
+      { id: 'cancelar', texto: 'Cancelar' },
+    ],
+  });
+  if (r.id !== 'importar' || !importado) return;
+
+  const junto = juntarProgressos(progresso, importado);
+  const confirma = await mostrarDialogo({
+    titulo: 'Confirmar importação',
+    texto: 'Hoje: ' + resumoProgresso(progresso) + '.\nNo texto: ' + resumoProgresso(importado) +
+      '.\nDepois de juntar: ' + resumoProgresso(junto) + '.',
+    botoes: [
+      { id: 'sim', texto: 'Importar', principal: true },
+      { id: 'nao', texto: 'Cancelar' },
+    ],
+  });
+  if (confirma.id !== 'sim') return;
+
+  progresso = junto;
+  salvarProgresso(progresso);
+  esconderBanner();
+  if (!jaIniciou || concluida) prepararSessao(Math.min(progresso.concluidas, TOTAL_SESSOES - 1));
+  else atualizarTela();
+}
+
 // ---------------- eventos ----------------
 $('btnIniciar').addEventListener('click', botaoPrincipal);
 $('btnReiniciar').addEventListener('click', reiniciar);
@@ -438,6 +625,9 @@ $('btnZerar').addEventListener('click', zerar);
 $('btnDesfazer').addEventListener('click', desfazerConclusaoAutomatica);
 $('btnFecharBanner').addEventListener('click', esconderBanner);
 $('btnTravar').addEventListener('click', travarToques);
+$('btnExportar').addEventListener('click', exportar);
+$('btnImportar').addEventListener('click', importar);
+alertas.aoMudarDeFora(aplicarMudancaExterna);
 
 const trava = $('trava');
 trava.addEventListener('pointerdown', comecarDestrave);
@@ -454,13 +644,17 @@ document.addEventListener('pointerdown', () => {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     if (rodando) { pegarWakeLock(); tick(); }
+    // No app Android: confere se algo mudou pela notificação.
+    alertas.lerEstadoExterno().then(ext => { if (ext) aplicarMudancaExterna(ext); });
   } else {
     persistir();
   }
 });
 window.addEventListener('pagehide', persistir);
 
-if ('serviceWorker' in navigator) {
+// O service worker (modo offline) é só para o site. No app Android os
+// arquivos já estão dentro do APK.
+if ('serviceWorker' in navigator && !ehAppNativo()) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 

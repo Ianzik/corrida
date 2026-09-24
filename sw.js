@@ -5,7 +5,7 @@
 // preso numa versão velha depois de uma atualização.
 // ====================================================================
 
-const CACHE = 'treino-v2';
+const CACHE = 'treino-v3';
 const ARQUIVOS = [
   './',
   './index.html',
@@ -16,6 +16,11 @@ const ARQUIVOS = [
   './js/sessao.js',
   './js/armazenamento.js',
   './js/alertas.js',
+  './js/avisos.js',
+  './js/nativo.js',
+  './js/dialogo.js',
+  './js/permissoes.js',
+  './js/transferencia.js',
   './icons/icone-192.png',
   './icons/icone-512.png',
   './icons/icone-maskable-512.png',
