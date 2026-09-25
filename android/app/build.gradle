@@ -1,0 +1,75 @@
+apply plugin: 'com.android.application'
+
+// Número da versão: o GitHub Actions passa o número da execução, assim
+// cada APK novo é "mais novo" que o anterior e o Android aceita atualizar.
+def codigoVersao = (System.getenv("VERSAO_CODIGO") ?: "1").toInteger()
+
+// Assinatura: a chave (keystore) NUNCA fica no repositório. O GitHub
+// Actions monta o arquivo a partir dos segredos e informa o caminho aqui.
+def chaveArquivo = System.getenv("KEYSTORE_ARQUIVO")
+def chaveSenha = System.getenv("KEYSTORE_SENHA")
+def temChave = chaveArquivo && chaveSenha && file(chaveArquivo).exists()
+
+android {
+    namespace = "br.com.ianzik.treinocorrida"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "br.com.ianzik.treinocorrida"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode codigoVersao
+        versionName "2.0." + codigoVersao
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        if (temChave) {
+            release {
+                storeFile file(chaveArquivo)
+                storePassword chaveSenha
+                keyAlias "treino"
+                keyPassword chaveSenha
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (temChave) signingConfig signingConfigs.release
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

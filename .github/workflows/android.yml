@@ -1,0 +1,98 @@
+# Gera o APK do app Android.
+#  - Push na main: gera o APK ASSINADO e publica como Release (baixa pelo celular).
+#  - Push na fase-2, pull requests ou execução manual: só compila, para conferir.
+# A chave de assinatura vem dos segredos do repositório (Settings > Secrets):
+#   KEYSTORE_BASE64  e  KEYSTORE_SENHA
+
+name: App Android
+
+on:
+  push:
+    branches: [main, fase-2]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      VERSAO_CODIGO: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Testes da lógica
+        run: npm test
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # O Android SDK já vem instalado no servidor do GitHub (ANDROID_HOME);
+      # o Gradle baixa sozinho a versão da plataforma que faltar.
+
+      - name: Copiar o site para o app
+        run: npm run android
+
+      - name: Montar a chave de assinatura
+        id: chave
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_SENHA: ${{ secrets.KEYSTORE_SENHA }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_SENHA" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/treino.jks"
+            echo "oficial=sim" >> "$GITHUB_OUTPUT"
+          else
+            # Sem os segredos: chave descartável, só para conferir que o
+            # APK final compila. Esse APK NÃO serve para instalar e atualizar.
+            SENHA=$(openssl rand -hex 16)
+            keytool -genkeypair -storetype PKCS12 -keystore "$RUNNER_TEMP/treino.jks" -alias treino \
+              -keyalg RSA -keysize 2048 -validity 1 -storepass "$SENHA" -keypass "$SENHA" -dname "CN=teste"
+            echo "::add-mask::$SENHA"
+            echo "senha=$SENHA" >> "$GITHUB_OUTPUT"
+            echo "oficial=nao" >> "$GITHUB_OUTPUT"
+            echo "::warning::Segredos KEYSTORE_BASE64/KEYSTORE_SENHA não cadastrados: APK de conferência, não é publicado."
+          fi
+
+      - name: Compilar APK
+        working-directory: android
+        env:
+          KEYSTORE_ARQUIVO: ${{ runner.temp }}/treino.jks
+          KEYSTORE_SENHA: ${{ secrets.KEYSTORE_SENHA || steps.chave.outputs.senha }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/treino-corrida.apk"
+
+      - name: Guardar o APK nesta execução
+        uses: actions/upload-artifact@v4
+        with:
+          name: treino-corrida-apk
+          path: treino-corrida.apk
+
+      - name: Publicar Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.chave.outputs.oficial == 'sim'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSAO="v2.0.${{ github.run_number }}"
+          gh release create "$VERSAO" treino-corrida.apk \
+            --title "Treino de Corrida $VERSAO" \
+            --notes "APK do app Android. No celular: baixe o arquivo treino-corrida.apk abaixo e toque nele para instalar (ou atualizar por cima). Commit: ${{ github.sha }}" \
+            --latest
