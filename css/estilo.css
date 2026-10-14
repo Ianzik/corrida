@@ -1,14 +1,17 @@
 :root {
   --surface: #ffffff;
   --ink: #1b1f1d;
-  --ink-soft: #8a9296;
+  --ink-soft: #586166;
   --line: #e8edee;
 
   --accent: #2fbf4f;
+  --accent-strong: #1b7f35;   /* fundo de botão com texto branco (5,1:1) */
 
-  --run-bg: #e7f7ea;   --run-ink: #1ea33f;
-  --walk-bg: #e7f1fc;  --walk-ink: #2f86d6;
-  --done-bg: #e7f7ea;  --done-ink: #1ea33f;
+  /* Cores de texto escurecidas para passar em contraste AA (4,5:1)
+     sobre branco e sobre os fundos claros correspondentes. */
+  --run-bg: #e7f7ea;   --run-ink: #167a31;
+  --walk-bg: #e7f1fc;  --walk-ink: #1c68ad;
+  --done-bg: #e7f7ea;  --done-ink: #167a31;
 
   --seg-aquece: #dfe5e7;
   --seg-caminha: #c4ccce;
@@ -112,7 +115,7 @@ button {
 button:active { transform: scale(0.98); }
 #btnIniciar { background: var(--ink); color: #fff; }
 #btnReiniciar { background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); }
-#btnConcluir { background: var(--accent); color: #fff; display: none; }
+#btnConcluir { background: var(--accent-strong); color: #fff; display: none; }
 
 .navSessao { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; gap: 10px; }
 .navSessao #planoProgresso { flex: 1; text-align: center; font-size: 13px; color: var(--ink-soft); }
@@ -186,6 +189,232 @@ li.hist {
 .travaBarraFill { background: var(--accent); height: 100%; width: 0%; }
 .trava.segurando .travaBarraFill { width: 100%; transition: width 2s linear; }
 
+/* ---------- rotina de mobilidade ---------- */
+
+.escolhas {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px;
+}
+.escolhas label {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 13px; font-weight: 700; color: var(--ink-soft);
+}
+select, .perfilNumeros input {
+  width: 100%; padding: 12px; font-size: 16px; font-family: inherit; font-weight: 600;
+  color: var(--ink); background: #f4f7f8;
+  border: 1.5px solid var(--line); border-radius: var(--radius-md);
+}
+.cartao > .botoes { margin: 16px 0 0; }
+.btnRotina { background: var(--ink); color: #fff; }
+
+/* ---------- início e navegação ---------- */
+/* ---------- acabamento (vale para o app todo) ---------- */
+::selection { background: #cfe3f7; color: var(--ink); }
+
+:focus-visible { outline: 3px solid var(--walk-ink); outline-offset: 2px; }
+
+/* Alvos de toque de 44 px sem mudar o desenho: a área sensível se
+   estende além do botão por um pseudo-elemento invisível. */
+.navBtn, .pular, .linkBtn { position: relative; }
+.navBtn::after, .pular::after, .linkBtn::after {
+  content: ''; position: absolute; inset: -8px -6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before { transition: none !important; }
+}
+
+/* O dia de treino: ativar > correr > recuperar */
+.diaCartao h2.rotulo { margin: 0; }
+.passosDia { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.passosDia li { display: block; padding: 0; margin: 0; background: none; }
+.passo {
+  display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px;
+  padding: 10px 16px; text-align: left; font-size: 17px; font-weight: 700;
+  background: #f4f7f8; color: var(--ink); border-radius: var(--radius-md);
+}
+.passoMarca {
+  flex: 0 0 auto; width: 28px; height: 28px; border-radius: 999px;
+  border: 2px solid #c4ccce; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800; color: #fff;
+}
+.passosDia li.proximo .passo { box-shadow: inset 0 0 0 2px var(--accent-strong); background: var(--surface); }
+.passosDia li.proximo .passoMarca { border-color: var(--accent-strong); }
+.passosDia li.feito .passo { background: var(--done-bg); color: var(--done-ink); }
+.passosDia li.feito .passoMarca { background: var(--accent-strong); border-color: var(--accent-strong); }
+.passoNome small { display: block; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.diaCartao .botoes { margin: 16px 0 0; }
+#diaProximo { min-height: 64px; font-size: 18px; }
+#diaProximo:disabled { background: var(--done-bg); color: var(--done-ink); opacity: 1; }
+.btnAtalho {
+  background: var(--surface); color: var(--ink); border: 1.5px solid var(--line);
+  min-height: 56px;
+}
+#paginaHome .cartao + .cartao .botoes { margin: 14px 0 0; }
+
+/* Faixas: o que está rodando em outra tela */
+.faixas {
+  position: sticky; top: 8px; z-index: 40;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.faixas:has(.faixa:not([hidden])) { margin-bottom: 12px; }
+.faixa {
+  display: flex; align-items: center; min-height: 44px; padding: 0 16px;
+  background: var(--ink); color: #fff; text-decoration: none;
+  font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
+  border-radius: 999px; box-shadow: var(--shadow);
+}
+
+/* Fim da sessão de corrida */
+.btnRecuperar { background: var(--accent-strong); color: #fff; min-height: 60px; font-size: 17px; }
+
+/* Execução em tela cheia: cobre a página, controles na zona do polegar */
+/* Trava a rolagem do fundo só enquanto a tela cheia está de fato visível
+   (se você for ao Início com a rotina rodando, a página volta a rolar). */
+body:has(#paginaMobilidade:not([hidden]) #execucao:not([hidden])) { overflow: hidden; }
+.execucao {
+  position: fixed; inset: 0; z-index: 35; overflow-y: auto;
+  background: linear-gradient(180deg, #c9e4fb 0%, #dfeefb 30%, #eef4f3 60%, #f6f3ee 100%);
+  padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+}
+.execMiolo {
+  min-height: 100%; max-width: 480px; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.execTopo {
+  display: flex; justify-content: space-between;
+  font-size: 14px; font-weight: 700; color: var(--ink-soft); font-variant-numeric: tabular-nums;
+}
+.execChip {
+  align-self: flex-start; padding: 5px 14px; border-radius: 999px;
+  background: var(--walk-bg); color: var(--walk-ink); font-size: 15px; font-weight: 800;
+}
+.execChip:empty { visibility: hidden; }
+.execNome { font-size: 28px; line-height: 1.15; font-weight: 800; letter-spacing: -0.5px; }
+.execAnel {
+  position: relative; width: min(74vw, 36vh, 320px); aspect-ratio: 1 / 1; margin: 6px auto;
+}
+.execRelogio {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: clamp(44px, 20vw, 92px); font-weight: 800; letter-spacing: -2px;
+  font-variant-numeric: tabular-nums;
+}
+.execInstrucao { font-size: 16px; line-height: 1.4; font-weight: 500; color: var(--ink-soft); }
+.execProximo { min-height: 22px; font-size: 15px; font-weight: 700; }
+.execControles {
+  margin-top: auto; padding-top: 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+/* Telas curtas: tudo continua cabendo, com controles na base */
+@media (max-height: 700px) {
+  .execucao { padding-top: 10px; }
+  .execMiolo { gap: 6px; }
+  .execNome { font-size: 24px; }
+  .execAnel { width: min(74vw, 28vh, 320px); margin: 2px auto; }
+  .execRelogio { font-size: clamp(40px, 16vw, 72px); }
+  .execInstrucao {
+    font-size: 14px; line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .execControles { gap: 8px; padding-top: 4px; }
+  .execucao .btnCrono { min-height: 54px; }
+  .execucao .btnSecundario { min-height: 52px; }
+}
+
+/* Preparo: verde, para não confundir com o exercício em si */
+.execucao.preparo .ringProg { stroke: var(--accent-strong); }
+.execucao.preparo .execChip { background: var(--done-bg); color: var(--done-ink); }
+
+/* Avisos: o que, sem isto, falharia em silêncio */
+.dicaPausa { margin-top: 12px; font-size: 13px; line-height: 1.4; font-weight: 600; color: var(--ink-soft); text-align: center; }
+#avisoTela:not(:empty) { line-height: 1.4; max-width: 32ch; margin-left: auto; margin-right: auto; }
+.execAviso {
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+  padding: 10px 14px; border-radius: var(--radius-md);
+  background: #fff4e0; color: #7a4a00; font-size: 14px; font-weight: 700; line-height: 1.35;
+}
+.execAviso .linkBtn { flex: none; min-height: 44px; padding: 0; color: #7a4a00; }
+.avisoRotinaVelha {
+  display: flex; flex-direction: column; gap: 10px; margin-top: 14px; padding: 12px 14px;
+  border-radius: var(--radius-md); background: #fff4e0; color: #7a4a00;
+  font-size: 14px; font-weight: 700; line-height: 1.4;
+}
+.avisoRotinaVelha .btnSecundario { flex: none; min-height: 48px; }
+.fimTrabalho { font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--ink); }
+
+/* Entrada da Mobilidade */
+.btnUltima { width: 100%; flex: none; margin-bottom: 18px; min-height: 52px; font-size: 14px; line-height: 1.25; }
+.ajudaTipo { margin-top: 12px; font-size: 13px; line-height: 1.4; font-weight: 600; color: var(--ink-soft); min-height: 18px; }
+.linkTeste { display: block; margin-top: 8px; flex: none; }
+
+
+/* ---------- cronômetro por exercício ---------- */
+li.exercicio.feito { background: var(--done-bg); }
+li.exercicio.feito .exercicioNome::before { content: '✓ '; color: var(--done-ink); }
+li.exercicio.ativoRotina {
+  background: var(--surface); box-shadow: inset 0 0 0 2px var(--walk-ink), var(--shadow);
+}
+.btnCrono {
+  flex: none; width: 100%; min-height: 60px; font-size: 18px;
+  background: var(--ink); color: #fff;
+}
+/* Voltar e pular: mesma peça na Corrida e na Mobilidade */
+.btnSecundario {
+  flex: 1; min-height: 56px; padding: 10px 12px;
+  font-size: 15px; line-height: 1.2;
+  background: var(--surface); color: var(--ink); border: 1.5px solid var(--line);
+}
+.btnSecundario:disabled { opacity: 0.45; }
+.cronoSecundarios { display: flex; gap: 10px; width: 100%; }
+/* Longe de Pausar de propósito: encerrar é raro e não pode ser acidental */
+.btnEncerrar {
+  flex: none; margin-top: 18px; min-height: 48px; padding: 8px 16px;
+  background: none; color: var(--ink-soft); font-size: 14px;
+  text-decoration: underline;
+}
+/* Fecho da rotina: fixo na base da tela. Assim aparece onde você está,
+   sem depender de rolagem (que falha com a tela apagada ou ao tocar). */
+.rotinaFim {
+  position: fixed; z-index: 30;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  width: min(452px, calc(100% - 28px));
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 16px; font-size: 16px; font-weight: 700;
+  background: var(--done-bg); color: var(--done-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 -2px 24px rgba(40, 60, 80, .18), var(--shadow);
+}
+.rotinaFim .btnRotina { flex: none; min-height: 52px; }
+.rotinaFim .linkBtn { flex: none; min-height: 40px; align-self: center; }
+/* abre espaço no fim da página para o fecho não cobrir o último exercício */
+#paginaMobilidade.comFecho, #paginaCorrida.comFecho { padding-bottom: 230px; }
+
+.perfil .botoes { margin: 14px 0 0; }
+.rotinaResumo {
+  margin-top: 16px; font-size: 14px; font-weight: 700; color: var(--ink);
+  white-space: pre-line; line-height: 1.45;
+}
+.listaRotina { list-style: none; margin-top: 10px; }
+li.exercicio {
+  display: block; background: #f4f7f8; color: var(--ink);
+  padding: 14px 16px; margin-bottom: 8px;
+}
+.exercicioTopo { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.exercicioNome { font-weight: 700; }
+.exercicioTopo .tempo { flex: 0 0 auto; font-size: 14px; color: var(--ink-soft); }
+.exercicioTexto { margin-top: 6px; font-size: 14px; line-height: 1.4; color: var(--ink-soft); font-weight: 500; }
+.exercicioEtiquetas { margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--walk-ink); }
+
+.perfil { margin: 0; padding: 0; }
+.perfil summary { cursor: pointer; font-size: 15px; font-weight: 700; padding: 12px 0; }
+.perfilTexto { margin-top: 8px; font-size: 13px; line-height: 1.45; color: var(--ink-soft); }
+.perfilCampos { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.perfilLinha { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; }
+.perfilNumeros { display: flex; gap: 8px; flex: 0 0 auto; }
+.perfilNumeros input { width: 72px; min-height: 44px; padding: 10px; text-align: center; }
+.perfilRegioes { margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--ink-soft); line-height: 1.5; }
+.perfilAviso { margin-top: 10px; min-height: 18px; font-size: 14px; font-weight: 700; color: var(--walk-ink); }
+
 /* ---------- adições da fase 2 ---------- */
 .rodape { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; }
 .rodape .linkBtn { flex: none; }
@@ -221,3 +450,59 @@ li.hist {
 .dialogoBotoes button { flex: none; padding: 15px; }
 .dialogoPrincipal { background: var(--ink); color: #fff; }
 .dialogoSecundario { background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); }
+
+/* ---------- ícones ---------- */
+.icone {
+  width: 1.25em; height: 1.25em; flex: none;
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  vertical-align: -0.25em;
+}
+.iconeGrande { width: 34px; height: 34px; }
+
+/* ---------- botão de som: voz, só alertas, sem som ---------- */
+.topoPagina { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+.btnSom {
+  display: inline-flex; align-items: center; gap: 8px; flex: none;
+  min-height: 44px; padding: 0 16px;
+  background: var(--surface); color: var(--ink); border: 1.5px solid var(--line);
+  font-size: 14px; font-weight: 700; box-shadow: var(--shadow);
+}
+.btnSom[data-modo="mudo"] { color: var(--ink-soft); }
+.execRodape { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; margin-top: 4px; }
+.execRodape .btnEncerrar { margin-top: 0; }
+.execRodape .btnSom { box-shadow: none; }
+
+/* ---------- rodapé da corrida: o que apaga dados fica à parte ---------- */
+.rodapePerigo { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); text-align: center; }
+.linkPerigo { color: #a32626; }
+
+/* ---------- barra de abas, sempre ao alcance do polegar ---------- */
+body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+.abas {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  background: rgba(255, 255, 255, 0.97); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -4px 20px rgba(40, 60, 80, .08);
+}
+.abasMiolo { display: flex; max-width: 480px; margin: 0 auto; }
+.aba {
+  position: relative; flex: 1; min-height: 62px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  color: var(--ink-soft); text-decoration: none; font-size: 12px; font-weight: 700;
+}
+.aba .icone { width: 24px; height: 24px; }
+.aba[aria-current="page"] { color: var(--ink); }
+.aba[aria-current="page"]::before {
+  content: ''; position: absolute; top: 0; left: 28%; right: 28%; height: 3px;
+  border-radius: 0 0 3px 3px; background: var(--walk-ink);
+}
+/* bolinha: tem algo rodando naquela tela */
+.aba.emAndamento::after {
+  content: ''; position: absolute; top: 10px; left: calc(50% + 8px);
+  width: 10px; height: 10px; border-radius: 999px;
+  background: var(--accent-strong); border: 2px solid #fff;
+}
+
+/* os painéis de fim ficam acima da barra */
+.rotinaFim { bottom: calc(76px + env(safe-area-inset-bottom)); }
+#paginaMobilidade.comFecho, #paginaCorrida.comFecho { padding-bottom: 310px; }

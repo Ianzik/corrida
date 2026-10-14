@@ -14,11 +14,15 @@ import {
 } from './armazenamento.js';
 import * as alertas from './alertas.js';
 import { gerarExportacao, lerImportacao, juntarProgressos, aplicarConclusoes } from './transferencia.js';
-import { mostrarDialogo } from './dialogo.js';
+import { mostrarDialogo, confirmar } from './dialogo.js';
 import { ehAppNativo, chamar } from './nativo.js';
+import { iniciarTelaTreino, abrirRotina, estadoRotina } from './tela-treino.js';
+import { iniciarNavegacao } from './home.js';
+import { modoAtual, tocaTom, aoMudarDeModo, ligarBotaoSom } from './som-modo.js';
 
 const $ = id => document.getElementById(id);
 const RAIO = 110;
+const LARGURA_POR_FASE = { corrida: 18, caminhada: 8, aquecimento: 12, desaquecimento: 12 };
 const CIRCUNFERENCIA = 2 * Math.PI * RAIO;
 
 // ---------------- estado ----------------
@@ -133,7 +137,19 @@ let preparandoInicio = false;
 async function iniciar() {
   if (preparandoInicio) return;
   preparandoInicio = true;
-  try { await alertas.prepararInicio(); } finally { preparandoInicio = false; }
+  try {
+    // A rotina de mobilidade está rodando? Dois cronômetros avisando juntos confundem.
+    const rotina = estadoRotina();
+    if (rotina && rotina.rodando) {
+      const sim = await confirmar({
+        titulo: 'A rotina de mobilidade está rodando',
+        texto: 'Se iniciar a corrida agora, os avisos dos dois cronômetros vão tocar juntos.',
+        ok: 'Iniciar a corrida mesmo assim',
+      });
+      if (!sim) return;
+    }
+    await alertas.prepararInicio();
+  } finally { preparandoInicio = false; }
   if (rodando || concluida) return;
   rodando = true;
   jaIniciou = true;
@@ -185,30 +201,56 @@ function concluirSessao(tipo, quando, silencioso) {
   sincronizarAlertas();
   if (!silencioso) alertas.alertarFim();
   atualizarTela();
+  // O fecho (e o "Recuperar agora") fica junto do anel: leva a tela até o topo.
+  if (location.hash === '#corrida') window.scrollTo(0, 0);
   return anterior;
 }
 
-function concluirManual() {
+async function concluirManual() {
   if (concluida) return;
-  if (!confirm('Encerrar a sessão agora e marcá-la como concluída?')) return;
+  const sim = await confirmar({
+    titulo: 'Concluir a sessão agora?',
+    texto: 'Ela será marcada como concluída, mesmo sem ter chegado ao fim.',
+    ok: 'Concluir sessão',
+  });
+  if (!sim || concluida) return;
   concluirSessao('manual', Date.now(), false);
 }
 
-function reiniciar() {
-  if (jaIniciou && !concluida && !confirm('Recomeçar esta sessão do zero?')) return;
+async function reiniciar() {
+  if (jaIniciou && !concluida) {
+    const sim = await confirmar({
+      titulo: 'Recomeçar esta sessão?',
+      texto: 'O cronômetro volta ao início.',
+      ok: 'Recomeçar',
+    });
+    if (!sim) return;
+  }
   prepararSessao(posicaoAtual);
 }
 
-function irParaSessao(posicao, semPerguntar) {
+async function irParaSessao(posicao, semPerguntar) {
   if (rodando) return;
-  if (!semPerguntar && jaIniciou && !concluida && !confirm('Descartar a sessão em andamento?')) return;
+  if (!semPerguntar && jaIniciou && !concluida) {
+    const sim = await confirmar({
+      titulo: 'Descartar a sessão em andamento?',
+      texto: 'O cronômetro desta sessão será perdido.',
+      ok: 'Descartar',
+    });
+    if (!sim) return;
+  }
   esconderBanner();
   prepararSessao(posicao);
 }
 
-function zerar() {
+async function zerar() {
   if (rodando) return;
-  if (!confirm('Zerar todo o progresso e o histórico, voltando para a Semana 1?')) return;
+  const sim = await confirmar({
+    titulo: 'Zerar o progresso?',
+    texto: 'Apaga todo o progresso e o histórico e volta para a Semana 1.',
+    ok: 'Zerar tudo',
+  });
+  if (!sim) return;
   zerarProgresso();
   progresso = carregarProgresso();
   esconderBanner();
@@ -243,7 +285,7 @@ async function pegarWakeLock() {
     return;
   }
   if (!('wakeLock' in navigator)) {
-    $('avisoTela').textContent = 'Mantenha a tela acesa manualmente';
+    $('avisoTela').textContent = 'Este navegador não mantém a tela acesa. Se ela apagar, os avisos param: deixe o celular desbloqueado ou use o app Android.';
     return;
   }
   try {
@@ -251,7 +293,7 @@ async function pegarWakeLock() {
     $('avisoTela').textContent = 'Tela travada acesa durante o treino';
     wakeLock.addEventListener('release', () => { if (!rodando) $('avisoTela').textContent = ''; });
   } catch (e) {
-    $('avisoTela').textContent = 'Não foi possível manter a tela acesa';
+    $('avisoTela').textContent = 'Não consegui manter a tela acesa. Se ela apagar, os avisos param: deixe o celular desbloqueado ou use o app Android.';
   }
 }
 async function soltarWakeLock() {
@@ -299,6 +341,8 @@ function desenharTrilho() {
     const visivel = Math.max(comprimento - folga, 1);
     const arco = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     arco.setAttribute('class', 'ringSeg');
+    // Espessura além do tom de cinza: corre = grosso, caminha = fino.
+    arco.style.strokeWidth = String(LARGURA_POR_FASE[bloco.fase] || 14);
     arco.setAttribute('cx', '120'); arco.setAttribute('cy', '120'); arco.setAttribute('r', String(RAIO));
     arco.setAttribute('stroke', corDaFase(bloco.fase));
     arco.setAttribute('stroke-dasharray', visivel + ' ' + (CIRCUNFERENCIA - visivel));
@@ -373,20 +417,29 @@ function atualizarTela() {
     cartao.className = 'cartao acaoCartao ' + bloco.tipo;
   }
 
-  $('tempoRestante').textContent = formatarRelogio(segundosRestantes);
+  // Ao concluir, o relógio mostra a duração do treino (não um "00:00" vazio)
+  // e aparece o fecho: painel fixo na base, com o caminho para recuperar.
+  $('tempoRestante').textContent = formatarRelogio(concluida ? totalSegundos : segundosRestantes);
+  $('fechoCorrida').hidden = !concluida;
+  $('paginaCorrida').classList.toggle('comFecho', concluida);
+  if (concluida) {
+    $('fechoCorridaTexto').textContent = '✓ Sessão ' + (posicaoAtual + 1) + ' de ' + TOTAL_SESSOES + ' concluída';
+    $('btnProximaSessao').hidden = posicaoAtual >= TOTAL_SESSOES - 1;
+  }
   $('progressoTexto').textContent = 'Bloco ' + (indice + 1) + ' de ' + intervalos.length;
 
+  // Concluída: o botão principal sai e quem leva adiante é o painel de fecho.
   const principal = $('btnIniciar');
-  if (concluida) {
-    principal.textContent = posicaoAtual < TOTAL_SESSOES - 1 ? 'Próxima sessão ›' : 'Plano concluído!';
-    principal.disabled = posicaoAtual >= TOTAL_SESSOES - 1;
-  } else {
+  principal.hidden = concluida;
+  if (!concluida) {
     principal.textContent = rodando ? 'Pausar' : (jaIniciou ? 'Continuar' : 'Iniciar');
     principal.disabled = false;
   }
 
   $('btnConcluir').style.display = jaIniciou && !concluida ? 'block' : 'none';
   $('btnTravar').hidden = !rodando;
+  // Explica por que Anterior, Próxima, Importar e Zerar ficam desabilitados.
+  $('dicaPausa').hidden = !rodando;
   $('btnPularAnt').disabled = concluida || indice === 0;
   $('btnPularProx').disabled = concluida || indice === intervalos.length - 1;
 
@@ -408,7 +461,8 @@ function atualizarTela() {
   $('btnImportar').disabled = rodando;
   $('btnZerar').disabled = rodando;
 
-  $('avisoSom').hidden = !(rodando && !alertas.audioLiberado());
+  // "Sem som" é escolha sua, não um bloqueio do navegador: não avisa.
+  $('avisoSom').hidden = !(rodando && tocaTom(modoAtual()) && !alertas.audioLiberado());
   renderizarHistorico();
 }
 
@@ -617,6 +671,14 @@ async function importar() {
 $('btnIniciar').addEventListener('click', botaoPrincipal);
 $('btnReiniciar').addEventListener('click', reiniciar);
 $('btnConcluir').addEventListener('click', concluirManual);
+$('btnRecuperarAgora').addEventListener('click', () =>
+  abrirRotina({ tipo: 'recuperar', modalidade: 'corrida', montar: true }));
+$('btnProximaSessao').addEventListener('click', botaoPrincipal);
+
+// Botões de som (Início, Corrida e tela cheia da Mobilidade): mesmo estado.
+document.querySelectorAll('.btnSom').forEach(ligarBotaoSom);
+// Trocou o modo: o serviço Android recebe a agenda de novo (com ou sem voz).
+aoMudarDeModo(() => { sincronizarAlertas(); atualizarTela(); });
 $('btnPularAnt').addEventListener('click', () => pularBloco(-1));
 $('btnPularProx').addEventListener('click', () => pularBloco(1));
 $('btnAnterior').addEventListener('click', () => irParaSessao(posicaoAtual - 1));
@@ -638,7 +700,9 @@ trava.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('pointerdown', () => {
   alertas.destravarAudio();
   if (rodando && wakeLock === null) pegarWakeLock();
-  setTimeout(() => { $('avisoSom').hidden = !(rodando && !alertas.audioLiberado()); }, 100);
+  setTimeout(() => {
+    $('avisoSom').hidden = !(rodando && tocaTom(modoAtual()) && !alertas.audioLiberado());
+  }, 100);
 }, { capture: true });
 
 document.addEventListener('visibilitychange', () => {
@@ -658,4 +722,6 @@ if ('serviceWorker' in navigator && !ehAppNativo()) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
+iniciarTelaTreino();
+iniciarNavegacao();
 arrancar();

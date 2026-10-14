@@ -10,7 +10,8 @@
 // ====================================================================
 
 import { ehAppNativo, chamar, ouvir } from './nativo.js';
-import { montarAgenda, falaDoBloco } from './avisos.js';
+import { montarAgenda, falaDoBloco, agendaParaModo } from './avisos.js';
+import { modoAtual, tocaTom, falaVoz, codigoNativo } from './som-modo.js';
 import { nomeDaSessao } from './plano.js';
 import { prepararPermissoes } from './permissoes.js';
 
@@ -37,6 +38,7 @@ export function audioLiberado() {
 }
 
 function tocarSequencia(notas) {
+  if (!tocaTom(modoAtual())) return; // "sem som": só a vibração avisa
   if (!audioLiberado()) return;
   let inicio = audioCtx.currentTime;
   notas.forEach(nota => {
@@ -70,8 +72,19 @@ function alertarCaminhada() {
   tocarSequencia([{ freq: 440, dur: 150, gap: 40 }, { freq: 330, dur: 280 }]);
   vibrar(400);
 }
+// No app, quem vibra é o serviço; só quando ele não é chamado ("sem som") o
+// site vibra por conta própria.
+function vibrarSemServico(padrao) {
+  try { if (navigator.vibrate) navigator.vibrate(padrao); } catch (e) {}
+}
+
 export function alertarFim() {
-  if (NATIVO) { chamar('tocar', { tipo: 'fim', fala: 'Sessão concluída' }).catch(() => {}); return; }
+  if (NATIVO) {
+    const modo = modoAtual();
+    if (!tocaTom(modo)) { vibrarSemServico([300, 100, 300, 100, 300]); return; }
+    chamar('tocar', { tipo: 'fim', fala: falaVoz(modo) ? 'Sessão concluída' : '' }).catch(() => {});
+    return;
+  }
   tocarSequencia([{ freq: 523, dur: 150, gap: 30 }, { freq: 659, dur: 150, gap: 30 }, { freq: 784, dur: 450 }]);
   vibrar([300, 100, 300, 100, 300]);
 }
@@ -85,8 +98,12 @@ export function bipContagem() {
 export function alertarBloco(intervalos, indice) {
   const bloco = intervalos[indice];
   if (NATIVO) {
+    const modo = modoAtual();
+    if (!tocaTom(modo)) { vibrarSemServico(bloco.tipo === 'corrida' ? [200, 100, 200] : 400); return; }
     // O serviço ignora se ele mesmo acabou de anunciar este bloco.
-    chamar('tocar', { tipo: bloco.tipo, indice, fala: falaDoBloco(intervalos, indice) }).catch(() => {});
+    chamar('tocar', {
+      tipo: bloco.tipo, indice, fala: falaVoz(modo) ? falaDoBloco(intervalos, indice) : '',
+    }).catch(() => {});
     return;
   }
   if (bloco.tipo === 'corrida') alertarCorrida(); else alertarCaminhada();
@@ -128,9 +145,11 @@ function enviarPendente() {
   // Pausado: monta a agenda como se continuasse agora; o serviço
   // desloca os horários quando você apertar Continuar.
   const fim = e.rodando ? e.fimDoIntervalo : e.atualizadaEm + e.segundosRestantes * 1000;
+  const modo = modoAtual();
   chamar('sincronizar', {
     posicao: e.posicao,
     titulo: nomeDaSessao(e.posicao),
+    somModo: codigoNativo(modo),
     indice: e.indice,
     rodando: e.rodando,
     fimDoIntervalo: fim,
@@ -138,7 +157,7 @@ function enviarPendente() {
     iniciadaEm: e.iniciadaEm,
     atualizadaEm: e.atualizadaEm,
     blocoAtual: { descricao: e.intervalos[e.indice].descricao, tipo: e.intervalos[e.indice].tipo },
-    agenda: montarAgenda(e.intervalos, e.indice, fim),
+    agenda: agendaParaModo(montarAgenda(e.intervalos, e.indice, fim), modo),
   }).catch(() => {});
 }
 

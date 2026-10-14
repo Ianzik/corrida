@@ -23,8 +23,8 @@ export function falaDoBloco(intervalos, indice) {
     return 'Últimos ' + minutos(DESAQUECIMENTO) + ' de desaquecimento';
   }
   if (bloco.tipo === 'corrida') {
-    // "Corra 3/6" vira "Corra, 3 de 6"
-    const m = /(\d+)\/(\d+)/.exec(bloco.descricao);
+    // "Corra · 3 de 6" vira "Corra, 3 de 6"
+    const m = /(\d+) de (\d+)/.exec(bloco.descricao);
     return m ? 'Corra, ' + m[1] + ' de ' + m[2] : 'Corra';
   }
   return 'Caminhe';
@@ -33,6 +33,14 @@ export function falaDoBloco(intervalos, indice) {
 function minutos(segundos) {
   const m = Math.round(segundos / 60);
   return m === 1 ? '1 minuto' : m + ' minutos';
+}
+
+// Adapta a agenda ao modo de som escolhido. Só "voz" mantém a fala; nos outros
+// modos a fala sai (o serviço toca só o tom quando ela vem vazia). Nenhum item
+// é removido: o item "fim" é o que conclui a sessão no serviço.
+export function agendaParaModo(agenda, modo) {
+  if (modo === 'voz') return agenda;
+  return agenda.map(item => (item.fala ? { ...item, fala: '' } : item));
 }
 
 // Lista de avisos a partir do bloco atual.

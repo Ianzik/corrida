@@ -194,6 +194,11 @@ public class TreinoService extends Service {
         atualizarNotificacao();
     }
 
+    /** Modo do som escolhido no site: 0 sem som, 1 só alertas, 2 alertas e voz. */
+    private int somModo() {
+        return sessao != null ? sessao.optInt("somModo", 2) : 2;
+    }
+
     /** Toca o que venceu e agenda a próxima conferência. */
     private void processar() {
         handler.removeCallbacks(tique);
@@ -228,11 +233,11 @@ public class TreinoService extends Service {
             } catch (JSONException e) { /* não acontece com chaves fixas */ }
             if (indice != ultimoIndiceAnunciado) {
                 ultimoIndiceAnunciado = indice;
-                avisador.troca(ultimaTroca.optString("tipo"), ultimaTroca.optString("fala"));
+                avisador.troca(ultimaTroca.optString("tipo"), ultimaTroca.optString("fala"), somModo());
             }
             atualizarNotificacao();
         }
-        if (bip != null && agora - bip.optLong("em") <= 1500) avisador.bip();
+        if (bip != null && agora - bip.optLong("em") <= 1500) avisador.bip(somModo());
         salvar();
 
         if (proximo < agenda.length()) {
@@ -294,7 +299,7 @@ public class TreinoService extends Service {
         Armazem.adicionarConclusao(this, sessao.optInt("posicao"), quando, tipo);
         if (!fimAnunciado) {
             fimAnunciado = true;
-            avisador.troca("fim", fala);
+            avisador.troca("fim", fala, somModo());
         }
         String titulo = sessao.optString("titulo");
         sessao = null;
@@ -328,7 +333,7 @@ public class TreinoService extends Service {
             if (indice == ultimoIndiceAnunciado) return;
             ultimoIndiceAnunciado = indice;
         }
-        avisador.troca(tipo, fala);
+        avisador.troca(tipo, fala, somModo());
     }
 
     private void fecharAgora() {

@@ -3,3 +3,6 @@ www/
 *.jks
 *.keystore
 keystore.properties
+
+# ferramentas locais de design (críticas e cache do verificador)
+.impeccable/
