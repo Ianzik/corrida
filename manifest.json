@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Treino de Corrida",
+  "name": "Treino",
   "short_name": "Treino",
-  "description": "Do zero aos 30 minutos contínuos",
+  "description": "Corrida e mobilidade: ativar, correr e recuperar",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

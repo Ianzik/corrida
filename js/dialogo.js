@@ -74,6 +74,20 @@ export function mostrarDialogo(opcoes) {
   });
 }
 
+// Pergunta de sim ou não, com o diálogo do app (no lugar do confirm() nativo,
+// que é pequeno para dedos suados e destoa do resto). Devolve true ou false.
+export async function confirmar({ titulo, texto, ok, cancelar }) {
+  const r = await mostrarDialogo({
+    titulo,
+    texto,
+    botoes: [
+      { id: 'sim', texto: ok || 'Confirmar', principal: true },
+      { id: 'nao', texto: cancelar || 'Cancelar' },
+    ],
+  });
+  return r.id === 'sim';
+}
+
 export function avisoNoDialogo(texto) {
   $('dialogoAviso').textContent = texto;
 }

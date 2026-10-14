@@ -8,6 +8,7 @@
 // ====================================================================
 
 import { TOTAL_SESSOES } from './plano.js';
+import { TIPOS, MODALIDADES, PARTES, TEMPOS, normalizarPerfil } from './treino.js';
 
 export const CHAVE_PROGRESSO = 'treinoCorrida.progresso';
 export const CHAVE_SESSAO = 'treinoCorrida.sessaoAtiva';
@@ -57,6 +58,49 @@ export function desfazerConclusao(progresso, anterior) {
     concluidas: anterior,
     historico: progresso.historico.slice(0, -1),
   };
+}
+
+// ---- rotina de mobilidade ----
+// Seu teste de mobilidade e a última escolha ficam só neste aparelho.
+// Não entram no "Exportar progresso" e o "Zerar progresso" não os apaga.
+export const CHAVE_MOBILIDADE = 'treinoCorrida.mobilidade';
+export const CHAVE_ROTINA = 'treinoCorrida.rotina';
+
+export function carregarPerfilMobilidade() { return normalizarPerfil(ler(CHAVE_MOBILIDADE)); }
+export function salvarPerfilMobilidade(perfil) { gravar(CHAVE_MOBILIDADE, normalizarPerfil(perfil)); }
+
+// { escolha: { tipo, modalidade, parte, minutos } | null, recentes: [ids] }
+export function carregarRotina() {
+  const d = ler(CHAVE_ROTINA);
+  const e = d && d.escolha;
+  const valida = e
+    && TIPOS.some(t => t.id === e.tipo)
+    && MODALIDADES.some(m => m.id === e.modalidade)
+    && PARTES.some(p => p.id === e.parte)
+    && TEMPOS.includes(e.minutos);
+  return {
+    escolha: valida ? { tipo: e.tipo, modalidade: e.modalidade, parte: e.parte, minutos: e.minutos } : null,
+    recentes: d && Array.isArray(d.recentes) ? d.recentes.filter(i => typeof i === 'string').slice(-40) : [],
+  };
+}
+export function salvarRotina(r) { gravar(CHAVE_ROTINA, r); }
+
+// Rotinas de mobilidade concluídas: [{ tipo, modalidade, em }].
+// Alimenta o "dia de corrida" da tela inicial.
+export const CHAVE_ROTINAS_FEITAS = 'treinoCorrida.rotinasFeitas';
+const MAX_ROTINAS_FEITAS = 60;
+
+export function carregarRotinasFeitas() {
+  const lista = ler(CHAVE_ROTINAS_FEITAS);
+  if (!Array.isArray(lista)) return [];
+  return lista
+    .filter(r => r && typeof r.tipo === 'string' && typeof r.modalidade === 'string' && typeof r.em === 'number')
+    .map(r => ({ tipo: r.tipo, modalidade: r.modalidade, em: r.em }))
+    .slice(-MAX_ROTINAS_FEITAS);
+}
+export function registrarRotinaFeita(tipo, modalidade, em) {
+  const lista = carregarRotinasFeitas().concat([{ tipo, modalidade, em }]);
+  gravar(CHAVE_ROTINAS_FEITAS, lista.slice(-MAX_ROTINAS_FEITAS));
 }
 
 // ---- sessão em andamento ----

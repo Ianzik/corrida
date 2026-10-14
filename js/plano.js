@@ -49,14 +49,14 @@ export function gerarIntervalos(semana) {
   for (let i = 0; i < semana.runReps; i++) {
     intervalos.push({
       tipo: 'corrida', fase: 'corrida', segundos: semana.runSeconds,
-      descricao: semana.runReps > 1 ? 'Corra ' + (i + 1) + '/' + semana.runReps : 'Corra',
+      descricao: semana.runReps > 1 ? 'Corra · ' + (i + 1) + ' de ' + semana.runReps : 'Corra',
     });
     const ehUltima = i === semana.runReps - 1;
     if (!ehUltima && semana.walkBetweenSeconds > 0) {
       caminhadaN++;
       intervalos.push({
         tipo: 'caminhada', fase: 'caminhada', segundos: semana.walkBetweenSeconds,
-        descricao: totalCaminhadas > 1 ? 'Caminhe ' + caminhadaN + '/' + totalCaminhadas : 'Caminhe',
+        descricao: totalCaminhadas > 1 ? 'Caminhe · ' + caminhadaN + ' de ' + totalCaminhadas : 'Caminhe',
       });
     }
   }

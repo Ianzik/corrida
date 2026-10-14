@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Treino de Corrida</title>
+  <title>Treino</title>
   <meta name="theme-color" content="#cce5fb">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,82 +16,279 @@
 </head>
 <body>
 
-  <header>
-    <h1>Treino de Corrida</h1>
-    <p class="subtitulo">Do zero aos 30 minutos contínuos</p>
-  </header>
+  <!-- Ícones (traço de 2 px, herdam a cor do texto) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-som-voz" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9.5a4 4 0 0 1 0 5"/><path d="M18.8 6.8a8 8 0 0 1 0 10.4"/></symbol>
+    <symbol id="i-som-alertas" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15L6 16z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></symbol>
+    <symbol id="i-som-mudo" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9.5l4 5M21 9.5l-4 5"/></symbol>
+    <symbol id="i-aba-inicio" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/><path d="M10 20v-5h4v5"/></symbol>
+    <symbol id="i-aba-corrida" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V9.5"/><path d="M10 3.5h4"/><path d="M12 3.5v3"/></symbol>
+    <symbol id="i-aba-mobilidade" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.5"/><path d="M20 4v4.5h-4.5"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 15.5"/><path d="M4 20v-4.5h4.5"/></symbol>
+  </svg>
 
-  <div class="banner" id="banner" hidden>
-    <span id="bannerTexto"></span>
-    <div class="bannerAcoes">
-      <button id="btnDesfazer" class="navBtn">Desfazer</button>
-      <button id="btnFecharBanner" class="navBtn" aria-label="Fechar">✕</button>
-    </div>
+  <!-- Faixas: o que está rodando em outra tela -->
+  <div class="faixas" id="faixas">
+    <a class="faixa" id="faixaCorrida" href="#corrida" hidden></a>
+    <a class="faixa" id="faixaRotina" href="#mobilidade" hidden></a>
   </div>
 
-  <div class="cartao">
-    <div class="rotulo">Sessão atual <span class="marca" id="marcaConcluida" hidden>✓ já feita</span></div>
-    <div class="destaque" id="tituloSessao">Carregando...</div>
-    <div class="navSessao">
-      <button id="btnAnterior" class="navBtn">‹ Anterior</button>
-      <span id="planoProgresso">0 de 42 concluídas</span>
-      <button id="btnProxima" class="navBtn">Próxima ›</button>
-    </div>
-  </div>
+  <!-- ============ INÍCIO ============ -->
+  <main id="paginaHome" class="paginaNova">
+    <div class="topoPagina">
+      <button type="button" class="btnSom">
+        <svg class="icone" aria-hidden="true"><use href="#i-som-voz"></use></svg>
+        <span class="btnSomTexto">Alertas + voz</span>
+      </button>    </div>
+    <header>
+      <h1>Treino</h1>
+      <p class="subtitulo">O que vamos fazer hoje?</p>
+    </header>
+    <section class="cartao diaCartao" aria-labelledby="diaTitulo">
+      <h2 class="rotulo" id="diaTitulo">Dia de corrida</h2>
+      <ol class="passosDia" id="passosDia">
+        <li data-passo="ativar">
+          <button type="button" class="passo">
+            <span class="passoMarca" aria-hidden="true"></span>
+            <span class="passoNome">Ativar</span>
+          </button>
+        </li>
+        <li data-passo="corrida">
+          <button type="button" class="passo">
+            <span class="passoMarca" aria-hidden="true"></span>
+            <span class="passoNome">Correr <small id="passoCorridaSub"></small></span>
+          </button>
+        </li>
+        <li data-passo="recuperar">
+          <button type="button" class="passo">
+            <span class="passoMarca" aria-hidden="true"></span>
+            <span class="passoNome">Recuperar</span>
+          </button>
+        </li>
+      </ol>
+      <div class="botoes">
+        <button type="button" id="diaProximo" class="btnRotina"></button>
+      </div>
+    </section>
 
-  <div class="cartao acaoCartao" id="acaoCartao">
-    <div class="cronoLinha">
-      <button class="pular" id="btnPularAnt" title="Bloco anterior">‹</button>
-      <div class="ringWrap">
-        <svg class="ring" viewBox="0 0 240 240">
-          <g id="ringSegmentos"></g>
-          <circle class="ringProg" id="ringProg" cx="120" cy="120" r="110"></circle>
-        </svg>
-        <div class="ringCenter">
-          <div class="acaoTexto" id="acaoTexto">Pronto?</div>
-          <div class="tempoRestante" id="tempoRestante">00:00</div>
+    <section class="cartao" aria-labelledby="musculacaoTitulo">
+      <h2 class="rotulo" id="musculacaoTitulo">Dia de musculação</h2>
+      <div class="botoes">
+        <button type="button" id="atalhoAtivar" class="btnAtalho">Só ativar</button>
+        <button type="button" id="atalhoRecuperar" class="btnAtalho">Só recuperar</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ CORRIDA ============ -->
+  <main id="paginaCorrida" hidden>
+    <div class="topoPagina">
+      <button type="button" class="btnSom">
+        <svg class="icone" aria-hidden="true"><use href="#i-som-voz"></use></svg>
+        <span class="btnSomTexto">Alertas + voz</span>
+      </button>    </div>
+
+    <header>
+      <h1>Treino de Corrida</h1>
+      <p class="subtitulo">Do zero aos 30 minutos contínuos</p>
+    </header>
+
+    <div class="banner" id="banner" role="status" hidden>
+      <span id="bannerTexto"></span>
+      <div class="bannerAcoes">
+        <button id="btnDesfazer" class="navBtn">Desfazer</button>
+        <button id="btnFecharBanner" class="navBtn" aria-label="Fechar">✕</button>
+      </div>
+    </div>
+
+    <div class="cartao">
+      <div class="rotulo">Sessão atual <span class="marca" id="marcaConcluida" hidden>✓ já feita</span></div>
+      <div class="destaque" id="tituloSessao">Carregando...</div>
+      <div class="navSessao">
+        <button id="btnAnterior" class="navBtn">‹ Anterior</button>
+        <span id="planoProgresso">0 de 42 concluídas</span>
+        <button id="btnProxima" class="navBtn">Próxima ›</button>
+      </div>
+      <p id="dicaPausa" class="dicaPausa" hidden>Pause para trocar de sessão ou mexer no progresso.</p>
+    </div>
+
+    <div class="cartao acaoCartao" id="acaoCartao">
+      <div class="cronoLinha">
+        <div class="ringWrap">
+          <svg class="ring" viewBox="0 0 240 240" aria-hidden="true">
+            <g id="ringSegmentos"></g>
+            <circle class="ringProg" id="ringProg" cx="120" cy="120" r="110"></circle>
+          </svg>
+          <div class="ringCenter">
+            <div class="acaoTexto" id="acaoTexto" aria-live="polite">Pronto?</div>
+            <div class="tempoRestante" id="tempoRestante">00:00</div>
+          </div>
         </div>
       </div>
-      <button class="pular" id="btnPularProx" title="Próximo bloco">›</button>
+      <div id="avisoTela"></div>
+      <div id="avisoSom" class="avisoSom" hidden><svg class="icone" aria-hidden="true"><use href="#i-som-mudo"></use></svg> Toque na tela para reativar o som</div>
+      <button id="btnTravar" class="linkBtn" hidden><svg class="icone" aria-hidden="true"><use href="#i-lock"></use></svg> Travar toques</button>
     </div>
-    <div id="avisoTela"></div>
-    <div id="avisoSom" class="avisoSom" hidden>🔇 Toque na tela para reativar o som</div>
-    <button id="btnTravar" class="linkBtn" hidden>🔒 Travar toques</button>
-  </div>
 
-  <div class="cartao">
-    <div class="rotulo" id="progressoTexto">Bloco 0 de 0</div>
-    <div class="barra"><div class="barraPreenchida" id="barraPreenchida"></div></div>
-    <div class="tempoTotalLinha">
-      <span id="tempoTotalDecorrido">00:00 / 00:00</span>
-      <span class="faltam" id="tempoTotalRestante">faltam 00:00</span>
+    <!-- Mesma linha de controles da Mobilidade: principal em cima, voltar e pular embaixo -->
+    <div class="botoes">
+      <button id="btnIniciar">Iniciar</button>
+      <button id="btnReiniciar">Reiniciar</button>
     </div>
-  </div>
 
-  <div class="botoes">
-    <button id="btnIniciar">Iniciar</button>
-    <button id="btnReiniciar">Reiniciar</button>
-  </div>
+    <div class="botoes">
+      <button id="btnPularAnt" class="btnSecundario">‹&nbsp;Bloco anterior</button>
+      <button id="btnPularProx" class="btnSecundario">Próximo bloco&nbsp;›</button>
+    </div>
 
-  <div class="botoes">
-    <button id="btnConcluir">Concluir sessão</button>
-  </div>
+    <div class="botoes">
+      <button id="btnConcluir">Concluir sessão</button>
+    </div>
 
-  <div class="cartao">
-    <div class="rotulo">Estrutura da sessão</div>
-    <ul id="listaIntervalos"></ul>
-  </div>
+    <div class="cartao">
+      <div class="rotulo" id="progressoTexto">Bloco 0 de 0</div>
+      <div class="barra"><div class="barraPreenchida" id="barraPreenchida"></div></div>
+      <div class="tempoTotalLinha">
+        <span id="tempoTotalDecorrido">00:00 / 00:00</span>
+        <span class="faltam" id="tempoTotalRestante">faltam 00:00</span>
+      </div>
+    </div>
 
-  <div class="cartao" id="cartaoHistorico" hidden>
-    <div class="rotulo">Últimas sessões</div>
-    <ul id="listaHistorico"></ul>
-  </div>
+    <div class="cartao">
+      <div class="rotulo">Estrutura da sessão</div>
+      <ul id="listaIntervalos"></ul>
+    </div>
 
-  <p class="rodape">
-    <button id="btnExportar" class="linkBtn">Exportar progresso</button>
-    <button id="btnImportar" class="linkBtn">Importar progresso</button>
-    <button id="btnZerar" class="linkBtn">Zerar progresso</button>
-  </p>
+    <div class="cartao" id="cartaoHistorico" hidden>
+      <div class="rotulo">Últimas sessões</div>
+      <ul id="listaHistorico"></ul>
+    </div>
+
+    <p class="rodape">
+      <button id="btnExportar" class="linkBtn">Exportar progresso</button>
+      <button id="btnImportar" class="linkBtn">Importar progresso</button>
+    </p>
+    <p class="rodapePerigo">
+      <button id="btnZerar" class="linkBtn linkPerigo">Zerar progresso</button>
+    </p>
+
+    <!-- Fecho da sessão: fixo na base, aparece onde você estiver -->
+    <div id="fechoCorrida" class="rotinaFim" role="status" hidden>
+      <span id="fechoCorridaTexto"></span>
+      <button type="button" id="btnRecuperarAgora" class="btnRotina btnRecuperar">Recuperar agora</button>
+      <button type="button" id="btnProximaSessao" class="linkBtn">Próxima sessão ›</button>
+    </div>
+  </main>
+
+  <!-- ============ MOBILIDADE ============ -->
+  <main id="paginaMobilidade" class="paginaNova" hidden>
+    <div class="topoPagina">
+      <button type="button" class="btnSom">
+        <svg class="icone" aria-hidden="true"><use href="#i-som-voz"></use></svg>
+        <span class="btnSomTexto">Alertas + voz</span>
+      </button>    </div>
+
+    <header>
+      <h1>Mobilidade</h1>
+      <p class="subtitulo">Ativar, recuperar ou diário</p>
+    </header>
+
+    <div class="cartao" id="cartaoRotina">
+      <button type="button" id="btnRepetirUltima" class="btnAtalho btnUltima" hidden></button>
+      <div class="rotulo">Monte sua rotina</div>
+      <div class="escolhas">
+        <label>Tipo <select id="selTipo"></select></label>
+        <label>Modalidade <select id="selModalidade"></select></label>
+        <label>Parte do corpo <select id="selParte"></select></label>
+        <label>Tempo <select id="selTempo"></select></label>
+      </div>
+      <p id="ajudaTipo" class="ajudaTipo"></p>
+      <p class="ajudaTipo">Modalidade e parte do corpo: o esporte e a região que você vai treinar hoje.</p>
+      <div class="botoes">
+        <button id="btnMontarRotina" class="btnRotina">Montar rotina</button>
+      </div>
+      <div id="rotinaResumo" class="rotinaResumo" hidden></div>
+      <button type="button" id="btnAbrirTeste" class="linkBtn linkTeste" hidden>Preencher meu teste de mobilidade</button>
+      <div id="avisoRotinaVelha" class="avisoRotinaVelha" role="status" hidden>
+        <span>Seu teste mudou. A rotina abaixo foi montada com o teste anterior.</span>
+        <button type="button" id="btnRemontar" class="btnSecundario">Montar de novo</button>
+      </div>
+      <div class="botoes">
+        <button id="btnIniciarRotina" class="btnRotina" hidden>Iniciar rotina</button>
+      </div>
+      <ol id="listaRotina" class="listaRotina"></ol>
+      <!-- Fica depois da lista: é onde você está quando a rotina termina -->
+      <div id="rotinaFim" class="rotinaFim" role="status" hidden>
+        <span id="rotinaFimTexto">✓ Rotina concluída</span>
+        <span id="rotinaFimTrabalho" class="fimTrabalho"></span>
+        <button type="button" id="btnFimAcao" class="btnRotina">Voltar ao início</button>
+        <button type="button" id="btnRepetir" class="linkBtn">Repetir rotina</button>
+      </div>
+    </div>
+
+    <div class="cartao">
+      <details class="perfil" id="perfilMobilidade">
+        <summary>Meu teste de mobilidade</summary>
+        <p class="perfilTexto">
+          Digite as notas de 0 a 100 do seu teste de mobilidade (de um app ou de um fisioterapeuta).
+          Onde há dois campos, o primeiro é o lado esquerdo e o segundo o direito.
+          Movimentos abaixo de 80 ganham prioridade na rotina. Deixe em branco o que não mediu.
+        </p>
+        <div id="perfilCampos" class="perfilCampos"></div>
+        <div id="perfilRegioes" class="perfilRegioes"></div>
+        <div class="botoes">
+          <button id="btnSalvarPerfil" class="btnRotina">Salvar teste</button>
+        </div>
+        <p id="perfilAviso" class="perfilAviso" aria-live="polite"></p>
+      </details>
+    </div>
+
+    <!-- Execução em tela cheia: o que se vê de relance, no chão, com uma mão -->
+    <section id="execucao" class="execucao" hidden aria-label="Rotina em andamento">
+      <div class="execMiolo">
+        <div class="execTopo">
+          <span id="execContador">Exercício 1 de 1</span>
+          <span id="execTotal">00:00 / 00:00</span>
+        </div>
+        <div class="barra"><div class="barraPreenchida" id="execBarra"></div></div>
+
+        <div class="execChip" id="execChip" aria-live="polite"></div>
+        <h2 class="execNome" id="execNome"></h2>
+
+        <div class="execAnel">
+          <svg class="ring" viewBox="0 0 240 240" aria-hidden="true">
+            <circle class="ringSeg" cx="120" cy="120" r="110" stroke="#dfe5e7"></circle>
+            <circle class="ringProg" id="execProg" cx="120" cy="120" r="110"></circle>
+          </svg>
+          <div class="execRelogio" id="execRelogio">00:00</div>
+        </div>
+
+        <p class="execInstrucao" id="execInstrucao"></p>
+        <p class="execProximo" id="execProximo"></p>
+        <div class="execAviso" id="execAviso" role="status" hidden>
+          <span id="execAvisoTexto"></span>
+          <button type="button" id="btnExecAviso" class="linkBtn" hidden>Ativar som</button>
+        </div>
+
+        <div class="execControles">
+          <button type="button" id="btnExecPausar" class="btnCrono">Pausar</button>
+          <div class="cronoSecundarios">
+            <button type="button" id="btnExecVoltar" class="btnSecundario">‹&nbsp;Voltar</button>
+            <button type="button" id="btnExecPular" class="btnSecundario">Pular&nbsp;›</button>
+          </div>
+          <!-- Longe de Pausar, de propósito: encerrar é raro e não pode ser acidental -->
+          <div class="execRodape">
+            <button type="button" id="btnExecEncerrar" class="btnEncerrar">Encerrar rotina</button>
+            <button type="button" class="btnSom">
+              <svg class="icone" aria-hidden="true"><use href="#i-som-voz"></use></svg>
+              <span class="btnSomTexto">Alertas + voz</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 
   <div class="dialogoFundo" id="dialogo" hidden>
     <div class="dialogoCaixa" role="dialog" aria-modal="true" aria-labelledby="dialogoTitulo">
@@ -110,12 +307,27 @@
 
   <div class="trava" id="trava" hidden>
     <div class="travaCaixa">
-      <div class="travaIcone">🔒</div>
+      <div class="travaIcone"><svg class="icone iconeGrande" aria-hidden="true"><use href="#i-lock"></use></svg></div>
       <div>Toques travados</div>
       <div class="travaDica">Segure aqui por 2 segundos para destravar</div>
       <div class="travaBarra"><div class="travaBarraFill"></div></div>
     </div>
   </div>
+
+  <!-- Barra de abas: sempre ao alcance do polegar -->
+  <nav class="abas" aria-label="Navegação">
+    <div class="abasMiolo">
+      <a class="aba" id="abaInicio" data-pagina="home" href="#">
+        <svg class="icone" aria-hidden="true"><use href="#i-aba-inicio"></use></svg><span>Início</span>
+      </a>
+      <a class="aba" id="abaCorrida" data-pagina="corrida" href="#corrida">
+        <svg class="icone" aria-hidden="true"><use href="#i-aba-corrida"></use></svg><span>Corrida</span>
+      </a>
+      <a class="aba" id="abaMobilidade" data-pagina="mobilidade" href="#mobilidade">
+        <svg class="icone" aria-hidden="true"><use href="#i-aba-mobilidade"></use></svg><span>Mobilidade</span>
+      </a>
+    </div>
+  </nav>
 
   <script type="module" src="js/app.js"></script>
 </body>

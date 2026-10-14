@@ -122,6 +122,33 @@ final class Avisador implements TextToSpeech.OnInitListener {
         }
     }
 
+    /**
+     * Bipe da contagem respeitando o modo de som escolhido no site:
+     * 0 = sem som (só vibra), 1 = só alertas, 2 = alertas e voz.
+     */
+    void bip(int modo) {
+        if (modo == 0) {
+            vibrar(VIBRA_BIP);
+            return;
+        }
+        bip();
+    }
+
+    /**
+     * Aviso de troca respeitando o modo de som escolhido no site:
+     * 0 = sem som (só vibra), 1 = só o tom, 2 = tom e voz.
+     */
+    void troca(String tipo, final String fala, int modo) {
+        if (modo == 0) {
+            long[] vibra = VIBRA_CAMINHADA;
+            if ("corrida".equals(tipo)) vibra = VIBRA_CORRIDA;
+            else if ("fim".equals(tipo)) vibra = VIBRA_FIM;
+            vibrar(vibra);
+            return;
+        }
+        troca(tipo, modo >= 2 ? fala : "");
+    }
+
     boolean ocupado() {
         return comFoco;
     }
